@@ -8,13 +8,13 @@
 #include "DxLib.h"
 
 bool CGameState_ControlMakerMain::Init(CGameDataManage& pDataManageIns) {
-	/*CGetSysDataFromCSV sysReader;
+	CGetSysDataFromCSV sysReader;
 	sysReader.FileInit(pDataManageIns.GetDataHandle(0));
-	if (!m_data.reelManager.Init(pDataManageIns, sysReader))							return false;
+	if (!m_data.reelManager.Init(pDataManageIns, sysReader))						return false;
 	if (!m_data.randManager.Init(pDataManageIns, sysReader.GetSysDataID("flags")))	return false;
 	if (!m_data.castChecker.Init(pDataManageIns, sysReader.GetSysDataID("cast")))	return false;
 	if (!m_data.timeManager.Init(m_data.reelManager.GetReelNum()))					return false;
-	m_data.internalDataManager.Init();
+	/*m_data.internalDataManager.Init();
 	m_data.internalDataManager.SetSlotSetting(3);
 
 	if (

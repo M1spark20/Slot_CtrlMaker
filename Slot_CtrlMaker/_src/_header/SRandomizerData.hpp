@@ -3,11 +3,19 @@
 #include <array>
 #include <string>
 
-enum EFlagType{
+enum class EFlagType{
 	eFlagID,
 	eBonusID,
 	eIsReachCheck,
 	eFlagTypeMax
+};
+
+// [act]フラグデータ格納構造体
+struct SFlagTable {
+	int flagID, bonusID;
+	int dataID;
+	int reachCheckFlag;
+	std::string flagName, bonusName;
 };
 
 struct SRandTable{
@@ -20,9 +28,8 @@ struct SRandTable{
 };
 
 struct SRandomizerData{
-	std::vector<SRandTable>						randomizerData;		// 
-	std::vector<std::array<int, eFlagTypeMax>>	flagType;			// [flagID][EFlagType]
-	std::vector<std::pair<int, int>>			betAvailable;		// [gamemode, betNum]
-	std::vector<std::pair<int, int>>			rtModeAtBonusHit;	// [bonusID, transferRTMode]
-	std::vector<std::string>					flagName;
+	std::vector<SRandTable>				randomizerData;		// 
+	std::vector<SFlagTable>				flagType;			//
+	std::vector<std::pair<int, int>>	betAvailable;		// [gamemode, betNum]
+	std::vector<std::pair<int, int>>	rtModeAtBonusHit;	// [bonusID, transferRTMode]
 };

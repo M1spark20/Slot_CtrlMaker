@@ -27,12 +27,14 @@ bool CRandomizerReaderFromCSV::MakeData(SRandomizerData& p_Data){
 		GetStrSplitByComma(NowGetStr);
 		if(NowGetStr.at(0)[0] == ';') continue;
 		if(NowGetStr.at(0) == "F"){
-			std::array<int,eFlagTypeMax> flagData;
-			StrToNum(flagData[eFlagID] ,		NowGetStr.at(1));
-			StrToNum(flagData[eBonusID],		NowGetStr.at(2));
-			StrToNum(flagData[eIsReachCheck],	NowGetStr.at(4));
-			p_Data.flagType.push_back(flagData);
-			p_Data.flagName.push_back(NowGetStr.at(5));
+			SFlagTable flagTable;
+			StrToNum(flagTable.flagID ,			NowGetStr.at(1));
+			StrToNum(flagTable.bonusID,			NowGetStr.at(2));
+			StrToNum(flagTable.dataID,			NowGetStr.at(3));
+			StrToNum(flagTable.reachCheckFlag,	NowGetStr.at(4));
+			flagTable.flagName = NowGetStr.at(5);
+			flagTable.bonusName = NowGetStr.at(6);
+			p_Data.flagType.push_back(flagTable);
 		} else if(NowGetStr.at(0) == "T") {
 			SRandTable newData;
 			int flagMax;
@@ -45,7 +47,7 @@ bool CRandomizerReaderFromCSV::MakeData(SRandomizerData& p_Data){
 
 			newData.randSeed.resize(flagMax+1);
 			int randSum = 0;
-			for (unsigned int i = 0; i < flagMax + 1; ++i){
+			for (int i = 0; i < flagMax + 1; ++i){
 				StrToNum(newData.randSeed[i], NowGetStr.at(7 + i));
 				randSum += newData.randSeed[i];
 			}

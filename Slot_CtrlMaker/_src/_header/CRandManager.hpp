@@ -12,7 +12,8 @@ public:
 	bool		Init(const CGameDataManage& pDataManager, int pFileID, long pRandSeed=-1);
 	size_t		GetFlagNum() const { return m_flagData.flagType.size(); }
 	int			GetFlagData(int pFlagID, EFlagType pType) const;
-	std::string	GetFlagName(int pFlagID);
+	std::string	GetFlagName(int pFlagID) const;
+	std::string	GetBonusName(int pFlagID) const;
 	void		SetRandSeed(long pRandSeed);
 	//bool		Role(CSlotInternalDataManager& pData);
 	bool		GetBetAvailable(int pGameMode, int pBetNum) const;

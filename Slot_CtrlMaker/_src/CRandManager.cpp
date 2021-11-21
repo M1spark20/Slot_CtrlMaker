@@ -13,13 +13,31 @@ bool CRandManager::Init(const CGameDataManage& pDataManager, int pFileID, long p
 
 int CRandManager::GetFlagData(int pFlagID, EFlagType pType) const{
 	if (pFlagID < 0 || pFlagID >= GetFlagNum()) return -1;
-	if (pType < 0 || pType >= eFlagTypeMax) return -1;
-	return m_flagData.flagType[pFlagID][pType];
+	switch (pType)
+	{
+	case EFlagType::eFlagID:
+		return m_flagData.flagType[pFlagID].flagID;
+		break;
+	case EFlagType::eBonusID:
+		return m_flagData.flagType[pFlagID].bonusID;
+		break;
+	case EFlagType::eIsReachCheck:
+		return m_flagData.flagType[pFlagID].reachCheckFlag;
+		break;
+	default:
+		break;
+	}
+	return -1;
 }
 
-std::string	CRandManager::GetFlagName(int pFlagID){
+std::string	CRandManager::GetFlagName(int pFlagID) const{
 	if (pFlagID < 0 || pFlagID >= GetFlagNum()) return "";
-	return m_flagData.flagName[pFlagID];
+	return m_flagData.flagType[pFlagID].flagName;
+}
+
+std::string	CRandManager::GetBonusName(int pFlagID) const{
+	if (pFlagID < 0 || pFlagID >= GetFlagNum()) return "";
+	return m_flagData.flagType[pFlagID].bonusName;
 }
 
 void CRandManager::SetRandSeed(long pRandSeed){
