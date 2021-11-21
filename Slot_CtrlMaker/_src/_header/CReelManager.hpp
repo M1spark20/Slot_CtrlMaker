@@ -20,8 +20,8 @@ class CReelManager {
 public:
 	bool Init(const CGameDataManage& pDataManager, CGetSysDataFromCSV& pSysData);
 	bool Process(CSlotTimerManager& pTimer);
-	bool DrawReel(const CGameDataManage& pDataManager, const SReelDrawData pDrawData);
-	bool DrawReel(const CGameDataManage& pDataManager, const SReelDrawData pDrawData, unsigned int comaBegin);
+	bool DrawReel(const CGameDataManage& pDataManager, const SReelDrawData pDrawData, int pCanvas);
+	bool DrawReel(const CGameDataManage& pDataManager, const SReelDrawData pDrawData, unsigned int comaBegin, int pCanvas);
 
 	size_t	GetReelNum() const { return m_reelChaData.size(); }
 	int		GetCharaNum(int pReelID = 0) const;

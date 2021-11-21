@@ -139,11 +139,12 @@ int CReel::GetReelComaByFixedPos(int pComa) const{
 	return m_reelData.arrayData[pComa];
 }
 
-bool CReel::DrawReelMain(const CGameDataManage& pDataManager, SReelDrawData pData, int pCanvas, unsigned int pStartComa, bool pIsFixed) const{
+bool CReel::DrawReelMain(const CGameDataManage& pDataManager, SReelDrawData pData, int pNoteCanvas, int pTargetCanvas, unsigned int pStartComa, bool pIsFixed) const{
 	//DxLib::FillGraph(
 	const size_t comaDivNum = m_reelData.arrayData.size();
 	unsigned int destY = 0;
-	DxLib::SetDrawScreen(pCanvas);
+	DxLib::SetDrawScreen(pNoteCanvas);
+	DxLib::ClearDrawScreen();
 	DxLib::SetDrawBlendMode(DX_BLENDMODE_ALPHA, 255);
 	for (unsigned int i = 0; i < pData.comaNum+4; ++i){
 		const size_t pos = (comaDivNum + pStartComa + i-2) % comaDivNum;
@@ -154,7 +155,7 @@ bool CReel::DrawReelMain(const CGameDataManage& pDataManager, SReelDrawData pDat
 	}
 
 	const SReelChaUnit& baseComa = m_reelData.reelData[0];
-	DxLib::SetDrawScreen(DX_SCREEN_BACK);
+	DxLib::SetDrawScreen(pTargetCanvas);
 	DxLib::SetDrawBlendMode(DX_BLENDMODE_ALPHA, 255);
 	const float extRate[] = { pData.comaW / (float)baseComa.w, pData.comaH / (float)baseComa.h };
 	const float drawOffset = (pIsFixed ? 0.f : m_rotatePos - (float)baseComa.h * pStartComa) +
@@ -162,17 +163,17 @@ bool CReel::DrawReelMain(const CGameDataManage& pDataManager, SReelDrawData pDat
 	const float drawSrcH = pData.comaNum * baseComa.h + (pData.offsetLower + pData.offsetUpper) / extRate[1];
 	const float drawDstH = pData.comaH * pData.comaNum + pData.offsetUpper + pData.offsetLower;
 	DxLib::DrawRectExtendGraphF(pData.x, pData.y, pData.x + pData.comaW, pData.y + drawDstH,
-		0, (int)drawOffset, baseComa.w, (int)drawSrcH, pCanvas, TRUE);
+		0, (int)drawOffset, baseComa.w, (int)drawSrcH, pNoteCanvas, TRUE);
 	return true;
 }
 
-bool CReel::DrawReel(const CGameDataManage& pDataManager, SReelDrawData pData, int pCanvas) const{
-	return DrawReelMain(pDataManager, pData, pCanvas, m_comaPos, false);
+bool CReel::DrawReel(const CGameDataManage& pDataManager, SReelDrawData pData, int pNoteCanvas, int pTargetCanvas) const{
+	return DrawReelMain(pDataManager, pData, pNoteCanvas, pTargetCanvas, m_comaPos, false);
 }
 
-bool CReel::DrawReel(const CGameDataManage& pDataManager, SReelDrawData pData, int pCanvas, unsigned int pComaStart) const{
+bool CReel::DrawReel(const CGameDataManage& pDataManager, SReelDrawData pData, int pNoteCanvas, int pTargetCanvas, unsigned int pComaStart) const{
 	if (pComaStart >= m_reelData.arrayData.size()) return false;
-	return DrawReelMain(pDataManager, pData, pCanvas, pComaStart, true);
+	return DrawReelMain(pDataManager, pData, pNoteCanvas, pTargetCanvas, pComaStart, true);
 }
 
 // [act]各リールコマを16分割した位置を取得する

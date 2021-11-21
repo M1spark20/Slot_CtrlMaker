@@ -30,20 +30,20 @@ bool CReelManager::Process(CSlotTimerManager& pTimer){
 	return true;
 }
 
-bool CReelManager::DrawReel(const CGameDataManage& pDataManager, const SReelDrawData pDrawData){
+bool CReelManager::DrawReel(const CGameDataManage& pDataManager, const SReelDrawData pDrawData, int pCanvas){
 	if (pDrawData.comaNum >= 4) return false; // 仮の制約
 	for (auto it = m_reelChaData.begin(); it != m_reelChaData.end(); ++it){
 		if (it->GetReelID() != pDrawData.reelID) continue;
-		return it->DrawReel(pDataManager, pDrawData, m_drawingCanvas);
+		return it->DrawReel(pDataManager, pDrawData, m_drawingCanvas, pCanvas);
 	}
 	return false;
 }
 
-bool CReelManager::DrawReel(const CGameDataManage& pDataManager, const SReelDrawData pDrawData, unsigned int comaBegin){
+bool CReelManager::DrawReel(const CGameDataManage& pDataManager, const SReelDrawData pDrawData, unsigned int comaBegin, int pCanvas){
 	if (pDrawData.comaNum >= 4) return false; // 仮の制約
 	for (auto it = m_reelChaData.begin(); it != m_reelChaData.end(); ++it){
 		if (it->GetReelID() != pDrawData.reelID) continue;
-		return it->DrawReel(pDataManager, pDrawData, m_drawingCanvas, comaBegin);
+		return it->DrawReel(pDataManager, pDrawData, m_drawingCanvas, pCanvas, comaBegin);
 	}
 	return false;
 }

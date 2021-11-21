@@ -76,16 +76,28 @@ EChangeStateFlag CGameState_ControlMakerMain::Process(CGameDataManage& pDataMana
 }
 
 bool CGameState_ControlMakerMain::Draw(CGameDataManage& pDataManageIns) {
-	/*DxLib::SetDrawScreen(mBGWindow);
+	DxLib::SetDrawScreen(mBGWindow);
 	DxLib::ClearDrawScreen();
 
-	m_data.effectManager.Draw(pDataManageIns, m_data.timeManager, mBGWindow);
+	SReelDrawData drawReel;
+	/* SReelDrawDataèâä˙çÏê¨ */ {
+		drawReel.y = 1;
+		drawReel.comaW = 77; drawReel.comaH = 35; drawReel.comaNum = 3;
+		drawReel.offsetLower = 10; drawReel.offsetUpper = 10;
+	}
+	for (size_t i = 0; i < 3; ++i) {
+		drawReel.x = 502 + 78 * i; drawReel.reelID = i;
+		m_data.reelManager.DrawReel(pDataManageIns, drawReel, mBGWindow);
+		drawReel.x = 768 + 78 * i;
+		m_data.reelManager.DrawReel(pDataManageIns, drawReel, mBGWindow);
+	}
+	/*m_data.effectManager.Draw(pDataManageIns, m_data.timeManager, mBGWindow);
 	m_data.effectManager.RingSound(m_data.timeManager, pDataManageIns);
-	m_menuManager.Draw(mBGWindow);
+	m_menuManager.Draw(mBGWindow);*/
 
 	DxLib::SetDrawScreen(DX_SCREEN_BACK);
 	DxLib::SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 255);
-	DxLib::DrawGraph(0, 0, mBGWindow, FALSE);*/
+	DxLib::DrawGraph(0, 0, mBGWindow, FALSE);
 	return true;
 }
 

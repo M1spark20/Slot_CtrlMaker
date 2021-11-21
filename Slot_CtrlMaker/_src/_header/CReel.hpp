@@ -34,7 +34,7 @@ class CReel {
 	EReelStatus						m_nowStatus;
 	EReelStatus						m_lastStatus;
 
-	bool			DrawReelMain(const CGameDataManage& pDataManager, SReelDrawData pData, int pCanvas, unsigned int pStartComa, bool pIsFixed) const;
+	bool			DrawReelMain(const CGameDataManage& pDataManager, SReelDrawData pData, int pNoteCanvas, int pTargetCanvas, unsigned int pStartComa, bool pIsFixed) const;
 
 public:
 	bool			Init(const SReelChaData& pReelData);
@@ -51,6 +51,6 @@ public:
 	int				GetSlipCount() const;
 
 	bool			Process(CSlotTimerManager& pTimer);
-	bool			DrawReel(const CGameDataManage& pDataManager, SReelDrawData pData, int pCanvas) const;
-	bool			DrawReel(const CGameDataManage& pDataManager, SReelDrawData pData, int pCanvas, unsigned int pComaStart) const;
+	bool			DrawReel(const CGameDataManage& pDataManager, SReelDrawData pData, int pNoteCanvas, int pTargetCanvas) const;
+	bool			DrawReel(const CGameDataManage& pDataManager, SReelDrawData pData, int pNoteCanvas, int pTargetCanvas, unsigned int pComaStart) const;
 };
