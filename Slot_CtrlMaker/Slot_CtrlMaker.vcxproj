@@ -166,6 +166,7 @@
     <ClCompile Include="_src\CReelManager.cpp" />
     <ClCompile Include="_src\CRestoreManager.cpp" />
     <ClCompile Include="_src\CSlotCastChecker.cpp" />
+    <ClCompile Include="_src\CSlotFlowList.cpp" />
     <ClCompile Include="_src\CSlotTimerManager.cpp" />
     <ClCompile Include="_src\ErrClass.cpp" />
     <ClCompile Include="_src\gameloop.cpp" />
@@ -191,15 +192,18 @@
     <ClInclude Include="_src\_header\CReelManager.hpp" />
     <ClInclude Include="_src\_header\CRestoreManager.hpp" />
     <ClInclude Include="_src\_header\CSlotCastChecker.hpp" />
+    <ClInclude Include="_src\_header\CSlotFlowList.hpp" />
     <ClInclude Include="_src\_header\CSlotTimerManager.hpp" />
     <ClInclude Include="_src\_header\EChangeModeFlag.h" />
     <ClInclude Include="_src\_header\EChangeStateFlag.h" />
     <ClInclude Include="_src\_header\ErrClass.hpp" />
+    <ClInclude Include="_src\_header\ESlotFlowFlag.hpp" />
     <ClInclude Include="_src\_header\gameloop.h" />
     <ClInclude Include="_src\_header\IGameModeBase.h" />
     <ClInclude Include="_src\_header\IGameStateBase.hpp" />
     <ClInclude Include="_src\_header\IReadcsv.h" />
     <ClInclude Include="_src\_header\ISingleton.h" />
+    <ClInclude Include="_src\_header\ISlotFlowManager.hpp" />
     <ClInclude Include="_src\_header\keyexport.h" />
     <ClInclude Include="_src\_header\keyinput.h" />
     <ClInclude Include="_src\_header\SCastData.hpp" />

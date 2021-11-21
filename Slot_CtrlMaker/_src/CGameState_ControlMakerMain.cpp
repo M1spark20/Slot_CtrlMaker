@@ -2,7 +2,7 @@
 
 #include "_header/CGameDataManage.h"
 #include "_header/CGetSysDataFromCSV.hpp"
-//#include "_header/CSlotFlowList.hpp"
+#include "_header/CSlotFlowList.hpp"
 #include "_header/keyexport.h"
 #include "_header/CRestoreManager.hpp"
 #include "DxLib.h"
@@ -14,34 +14,6 @@ bool CGameState_ControlMakerMain::Init(CGameDataManage& pDataManageIns) {
 	if (!m_data.randManager.Init(pDataManageIns, sysReader.GetSysDataID("flags")))	return false;
 	if (!m_data.castChecker.Init(pDataManageIns, sysReader.GetSysDataID("cast")))	return false;
 	if (!m_data.timeManager.Init(m_data.reelManager.GetReelNum()))					return false;
-	/*m_data.internalDataManager.Init();
-	m_data.internalDataManager.SetSlotSetting(3);
-
-	if (
-		!m_data.effectManager.Init(pDataManageIns, sysReader.GetSysDataID("effect"),
-			m_data.timeManager, m_data.reelManager)
-		) return false;
-	if (!m_data.reachCollection.Init(
-		pDataManageIns, sysReader.GetSysDataID("collection"), m_data.reelManager.GetReelNum()
-	)) return false;
-
-	if (!m_menuManager.Init(pDataManageIns,
-		sysReader.GetSysDataID("license"),
-		sysReader.GetSysDataID("menuDataFont"),
-		sysReader.GetSysDataID("menuDataFontMid"),
-		sysReader.GetSysDataID("menuBase"),
-		sysReader.GetSysDataID("menuTitleFont")
-	)) return false;
-
-	CRestoreManagerRead reader;
-	if (reader.StartRead()) {
-		if (!m_data.internalDataManager.ReadRestore(reader)) return false;
-		if (!m_data.dataCounter.ReadRestore(reader)) return false;
-		if (!m_data.reelManager.ReadRestore(reader)) return false;
-		if (!m_data.timeManager.ReadRestore(reader)) return false;
-		if (!m_data.effectManager.ReadRestore(reader)) return false;
-		if (!m_data.reachCollection.ReadRestore(reader)) return false;
-	}
 
 	// k¬—p‰æ–Ê¶¬
 	DxLib::GetScreenState(&mDisplayW, &mDisplayH, NULL);
@@ -49,50 +21,47 @@ bool CGameState_ControlMakerMain::Init(CGameDataManage& pDataManageIns) {
 	mBGWindow = INT_MIN;
 
 	m_data.timeManager.Process();
-	m_pFlowManager = new CSlotFlowBet;
-	return m_pFlowManager->Init(m_data);*/
+	m_pFlowManager = new CSlotFlowMakeControl1st;
+	return m_pFlowManager->Init(m_data);
 	return true;
 }
 
 EChangeStateFlag CGameState_ControlMakerMain::Process(CGameDataManage& pDataManageIns, bool pExtendResolution) {
-	// mBGWindow¶¬
-	/*if (mBGWindow == INT_MIN) {
+	// mBGWindow¶¬(Šg‘åk¬—p‚É1–‡‰æ–Ê‚ğ‚©‚Ü‚¹‚é)
+	if (mBGWindow == INT_MIN) {
 		if (pExtendResolution) mBGWindow = DxLib::MakeScreen(2160, 1080);
 		else mBGWindow = DxLib::MakeScreen(1920, 1080);
 	}
 
 	CKeyExport_S& key = CKeyExport_S::GetInstance();
 	if (key.GetExportStatus() == EKeyExportStatus::eGameMain && key.ExportKeyState(KEY_INPUT_ESCAPE))
-		return eStateEnd;
+		return EChangeStateFlag::eStateEnd;
+
 	m_data.timeManager.Process();
 	ESlotFlowFlag flow = m_pFlowManager->Process(m_data);
-	if (flow != eFlowContinue) {
+	if (flow != ESlotFlowFlag::eFlowContinue) {
 		delete m_pFlowManager;	m_pFlowManager = nullptr;
 		switch (flow) {
-		case eFlowBetting:			m_pFlowManager = new CSlotFlowBet;		break;
-		case eFlowWaiting:			m_pFlowManager = new CSlotFlowWaiting;	break;
-		case eFlowReelAcceration:	m_pFlowManager = new CSlotFlowReelAcc;	break;
-		case eFlowReelMoving:		m_pFlowManager = new CSlotFlowReelMove;	break;
-		case eFlowPayout:			m_pFlowManager = new CSlotFlowPayout;	break;
-		case eFlowEnd:
-			return eStateEnd;
+		case ESlotFlowFlag::eFlowMake1st:
+			m_pFlowManager = new CSlotFlowMakeControl1st;
 			break;
-		case eFlowErrEnd:
-			return eStateErrEnd;
+		case ESlotFlowFlag::eFlowEnd:
+			return EChangeStateFlag::eStateEnd;
+			break;
+		case ESlotFlowFlag::eFlowErrEnd:
+			return EChangeStateFlag::eStateErrEnd;
 			break;
 		default:
-			return eStateErrEnd;
+			return EChangeStateFlag::eStateErrEnd;
 			break;
 		}
-		if (!m_pFlowManager->Init(m_data)) return eStateErrEnd;
+		if (!m_pFlowManager->Init(m_data)) return EChangeStateFlag::eStateErrEnd;
 	}
 
 	m_data.reelManager.Process(m_data.timeManager);
-	m_data.effectManager.Process(m_data.timeManager, m_data.internalDataManager, m_data.reachCollection, m_data, pExtendResolution);
-	m_menuManager.Process(pDataManageIns, m_data);
 
 	// ƒf[ƒ^•Û‘¶
-	if (m_data.restoreManager.IsActivate()) {
+	/*if (m_data.restoreManager.IsActivate()) {
 		if (!m_data.restoreManager.StartWrite()) return eStateErrEnd;
 		if (!m_data.internalDataManager.WriteRestore(m_data.restoreManager)) return eStateErrEnd;
 		if (!m_data.dataCounter.WriteRestore(m_data.restoreManager)) return eStateErrEnd;
@@ -121,5 +90,5 @@ bool CGameState_ControlMakerMain::Draw(CGameDataManage& pDataManageIns) {
 }
 
 CGameState_ControlMakerMain::~CGameState_ControlMakerMain() {
-	//delete m_pFlowManager;
+	delete m_pFlowManager;
 }
