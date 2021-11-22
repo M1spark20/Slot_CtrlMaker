@@ -23,7 +23,6 @@ bool CGameState_ControlMakerMain::Init(CGameDataManage& pDataManageIns) {
 	m_data.timeManager.Process();
 	m_pFlowManager = new CSlotFlowMakeControl1st;
 	return m_pFlowManager->Init(m_data);
-	return true;
 }
 
 EChangeStateFlag CGameState_ControlMakerMain::Process(CGameDataManage& pDataManageIns, bool pExtendResolution) {
