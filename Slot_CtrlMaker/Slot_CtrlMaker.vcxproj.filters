@@ -203,5 +203,8 @@
     <ClInclude Include="_src\_header\ESlotFlowFlag.hpp">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="_src\_header\SControlMakeData.hpp">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

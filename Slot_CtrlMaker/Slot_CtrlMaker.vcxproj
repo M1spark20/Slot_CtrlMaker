@@ -207,6 +207,7 @@
     <ClInclude Include="_src\_header\keyexport.h" />
     <ClInclude Include="_src\_header\keyinput.h" />
     <ClInclude Include="_src\_header\SCastData.hpp" />
+    <ClInclude Include="_src\_header\SControlMakeData.hpp" />
     <ClInclude Include="_src\_header\selectmode.h" />
     <ClInclude Include="_src\_header\setup.h" />
     <ClInclude Include="_src\_header\SMainReadFileIndex.h" />
