@@ -29,7 +29,7 @@ class CSlotControlManager {
 	void AdjustPos();
 	SControlDataSA* GetSA();
 	SControlAvailableDef* GetDef();
-	unsigned char* GetSS();
+	unsigned char* GetSS(bool pGet1st = false);
 	unsigned char Get2ndStyle();
 	void SetComaPos(const int pMoveOrder, const bool pIsReset, const bool pIsUp);
 	void SwitchATableType();
@@ -37,7 +37,7 @@ class CSlotControlManager {
 	void SetAvailShiftConf(unsigned char pNewFlag);
 	bool isSilp();
 	bool UpdateActiveFlag();
-	//bool JudgeComLR();
+	int Get2ndReel(bool pIsLeft);
 	unsigned long long GetAvailShiftData(unsigned long long pData, const unsigned char pShiftFlag);
 
 	int  GetPosFromSlipT(const size_t pTableNo, const int pPushPos);

@@ -53,7 +53,7 @@ bool CSlotControlManager::Init(const SSlotGameDataWrapper& pData) {
 		posData.stop1st = 0;
 		posData.cursorComa.resize(m_reelMax, 0);
 		posData.selectAvailID = 0;
-		posData.isWatchLeft = false;
+		posData.isWatchLeft = true;
 	}
 
 	UpdateActiveFlag();
@@ -187,15 +187,10 @@ void CSlotControlManager::SetComaPos(const int pMoveOrder, const bool pIsReset, 
 	}
 }
 
-/*bool CSlotControlManager::JudgeComLR() {
-	if (posData.currentOrder == 0) return false;
-	const int ref = posData.stop1st == 0 ? 1 : 0;
-	for (int i = 0; i < m_reelMax; ++i) {
-		if (i == posData.stop1st) continue;
-		return i == posData.selectReel;
-	}
-	return false;
-}*/
+int CSlotControlManager::Get2ndReel(bool pIsLeft) {
+	if (pIsLeft)	return posData.stop1st == 0 ? 1 : 0;	// 2nd左側の場合
+	else			return posData.stop1st == 2 ? 1 : 2;	// 2nd右側の場合
+}
 
 bool CSlotControlManager::Action(int pNewInput) {
 	bool setAns = true;
@@ -296,19 +291,19 @@ SControlAvailableDef* CSlotControlManager::GetDef() {
 }
 
 // [act]現在参照中の該当スベリIDの入った変数ポインタを返す
-unsigned char* CSlotControlManager::GetSS() {
+unsigned char* CSlotControlManager::GetSS(bool pGet1st) {
 	auto& nowMakeData = ctrlData[posData.currentFlagID];
 	const auto styleData = Get2ndStyle();
 	auto& nowCtrlData = nowMakeData.controlData[posData.stop1st];
-	if (posData.currentOrder == 0) {		// 1st制御
+	if (posData.currentOrder == 0 || pGet1st) {		// 1st制御
 		return &nowCtrlData.controlData1st;
-	} else if (posData.currentOrder == 1) {	// 2nd制御
-		if (styleData == 0x0) {				// 2ndPushSlip
-			int index = posData.cursorComa[0];
+	} else if (posData.currentOrder == 1) {			// 2nd制御
+		if (styleData == 0x0) {						// 2ndPushSlip
+			int index = posData.cursorComa[0] + posData.isWatchLeft ? 0 : m_comaMax;
 			return &nowCtrlData.controlData2nd.controlData2ndPS[index];
 		}
-		else if (styleData == 0x1) {		// 2ndStopSlip(cursorComa[0]に制限あり)
-			int index = posData.cursorComa[0];
+		else if (styleData == 0x1) {				// 2ndStopSlip(cursorComa[0]に制限あり)
+			int index = posData.cursorComa[0] + posData.isWatchLeft ? 0 : m_comaMax;;
 			return &nowCtrlData.controlData2nd.controlData2ndSS[index];
 		}
 	}
@@ -547,21 +542,45 @@ int CSlotControlManager::GetAvailDistance(const unsigned long long pData, const 
 bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDataManageIns, int pDrawFor) {
 	/* リール描画 */ {
 		std::vector<int> drawPos; drawPos.resize(m_reelMax * 2, -1);	// 0PS, 1PS, 2PS
+		const int reelPosByOrder[] = { Get2ndReel(posData.isWatchLeft), Get2ndReel(!posData.isWatchLeft) };
 		/* 描画リール定義 */ {
-			const int leftReel  = posData.stop1st == 0 ? 1 : 0;
-			const int rightReel = posData.stop1st == 2 ? 1 : 2;
-			if (posData.currentOrder == 0) {	// 1st
+			if (posData.currentOrder == 0) {			// 1st
 				const auto ss = GetSS();
 				drawPos[posData.stop1st * 2    ] = posData.cursorComa[0];
 				drawPos[posData.stop1st * 2 + 1] = GetPosFromSlipT(*ss, posData.cursorComa[0]);
-			} else if (Get2ndStyle() == 0x03) {	// 2nd/3rd共通
+			} else if (Get2ndStyle() == 0x03) {			// 2nd以降 2nd/3rd共通
 				const auto sa = GetSA();
-				drawPos[posData.stop1st * 2    ] = posData.cursorComa[0];
-				drawPos[posData.stop1st * 2 + 1] = posData.cursorComa[0];
-				drawPos[leftReel        * 2    ] = posData.cursorComa[1];
-				drawPos[leftReel        * 2 + 1] = 0;
-				drawPos[rightReel       * 2    ] = posData.cursorComa[2];
-				drawPos[rightReel       * 2 + 1] = 0;
+				drawPos[posData.stop1st   * 2    ] = posData.cursorComa[0];
+				drawPos[posData.stop1st   * 2 + 1] = posData.cursorComa[0];
+				drawPos[Get2ndReel(true)  * 2    ] = posData.cursorComa[1];
+				drawPos[Get2ndReel(true)  * 2 + 1] = GetPosFromAvailT(*sa, posData.cursorComa[1], true);
+				drawPos[Get2ndReel(false) * 2    ] = posData.cursorComa[2];
+				drawPos[Get2ndReel(false) * 2 + 1] = GetPosFromAvailT(*sa, posData.cursorComa[1], false);
+			} else if (posData.currentOrder == 1) {		// 2ndComSA以外
+				drawPos[posData.stop1st   * 2    ] = posData.cursorComa[0];
+				drawPos[reelPosByOrder[0] * 2    ] = posData.cursorComa[1];
+				if (Get2ndStyle() == 0x00) {				// PSテーブル
+					const unsigned char *const ss1 = GetSS(true);
+					const unsigned char *const ss2 = GetSS(false);
+					drawPos[posData.stop1st   * 2 + 1] = GetPosFromSlipT(*ss1, posData.cursorComa[0]);
+					drawPos[reelPosByOrder[0] * 2 + 1] = GetPosFromSlipT(*ss2, posData.cursorComa[1]);
+				} else if (Get2ndStyle() == 0x01) {			// SSテーブル
+					const unsigned char *const ss2 = GetSS(false);
+					drawPos[posData.stop1st   * 2 + 1] = posData.cursorComa[0];
+					drawPos[reelPosByOrder[0] * 2 + 1] = GetPosFromSlipT(*ss2, posData.cursorComa[1]);
+				} else {									// SAテーブル
+					const auto sa = GetSA();
+					drawPos[posData.stop1st   * 2 + 1] = posData.cursorComa[0];
+					drawPos[reelPosByOrder[0] * 2 + 1] = GetPosFromAvailT(*sa, posData.cursorComa[1], posData.isWatchLeft);
+				}
+			} else {									// 3rdComSA以外
+				const auto sa = GetSA();
+				drawPos[posData.stop1st   * 2    ] = posData.cursorComa[0];
+				drawPos[posData.stop1st   * 2 + 1] = posData.cursorComa[0];
+				drawPos[reelPosByOrder[0] * 2    ] = posData.cursorComa[1];
+				drawPos[reelPosByOrder[0] * 2 + 1] = posData.cursorComa[1];
+				drawPos[reelPosByOrder[1] * 2    ] = posData.cursorComa[2];
+				drawPos[reelPosByOrder[1] * 2 + 1] = GetPosFromAvailT(*sa, posData.cursorComa[2], posData.isWatchLeft);
 			}
 		}
 		SReelDrawData drawReel;
