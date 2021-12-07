@@ -48,7 +48,7 @@ class CSlotControlManager {
 	int  GetActiveFromAvailT(const SControlDataSA& pSAData, bool pIsLeft);
 
 	unsigned char			SetSlipT(bool& pCHK, const size_t pSrcTableNo, const int pPushPos, const int pNewVal);
-	SControlAvailableDef	SetAvailT(bool& pCHK, const size_t pSrcTableNo, const int pPushPos, const int pNewVal, const bool pIsPrior);
+	SControlAvailableDef	SetAvailT(bool& pCHK, const size_t pSrcTableNo, const int pPushPos, const int pNewVal, const unsigned char pTableFlag);
 
 public:
 	bool Init(const SSlotGameDataWrapper& pData);

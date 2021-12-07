@@ -213,7 +213,7 @@ bool CSlotControlManager::Action(int pNewInput) {
 		int comaIndex = posData.currentOrder;
 		const auto styleData = Get2ndStyle();
 		if(posData.currentOrder >= 1 && styleData == 0x3) comaIndex = posData.selectReel;
-		*refData = SetAvailT(setAns, refData->availableID, posData.cursorComa[comaIndex], pNewInput, refData->tableFlag & 0x4);
+		*refData = SetAvailT(setAns, refData->availableID, posData.cursorComa[comaIndex], pNewInput, refData->tableFlag);
 	} else {					// SSテーブル
 		auto refDataSS = GetSS();
 		if (refDataSS == nullptr) return false;
@@ -390,14 +390,15 @@ unsigned char CSlotControlManager::SetSlipT(bool& pCHK, const size_t pSrcTableNo
 
 // [act]引込T更新、テーブルNoの付与・付加条件指定・採番まで行う
 // [ret]新規引込T SControlAvailableDefインスタンス ただしエラー時は空データ+pCHKにfalseが入る
-SControlAvailableDef CSlotControlManager::SetAvailT(bool& pCHK, const size_t pSrcTableNo, const int pPushPos, const int pNewVal, const bool pIsPrior) {
+SControlAvailableDef CSlotControlManager::SetAvailT(bool& pCHK, const size_t pSrcTableNo, const int pPushPos, const int pNewVal, const unsigned char pTableFlag) {
 	pCHK = true;
+	const bool isPrior = (pTableFlag & 0x4) != 0;
 	SControlAvailableDef ans{ 0,0 };
 	if (pSrcTableNo >= tableAvailable.size()) { pCHK = false; return ans; }
 	if (pNewVal < 0 || pNewVal >= 5) { pCHK = false; return ans; }
 
 	// データ作成
-	unsigned long long newData = tableAvailable[pSrcTableNo].data;
+	unsigned long long newData = GetAvailShiftData(tableAvailable[pSrcTableNo].data, pTableFlag);
 	const unsigned long long posFlag = 1ull << pPushPos;
 	if (pNewVal >= 1)	newData |=  posFlag;	// 位置有効化
 	else				newData &= ~posFlag;	// 位置無効化
@@ -417,7 +418,7 @@ SControlAvailableDef CSlotControlManager::SetAvailT(bool& pCHK, const size_t pSr
 			++tableAvailable[ref].refNum;
 			ans.availableID = (unsigned char)ref;
 			ans.tableFlag = hitStyle;
-			if (pIsPrior) ans.tableFlag |= 0x4;
+			if (isPrior) ans.tableFlag |= 0x4;
 			return ans;
 		}
 		// 参照がない最初のデータの取得
@@ -427,7 +428,7 @@ SControlAvailableDef CSlotControlManager::SetAvailT(bool& pCHK, const size_t pSr
 	tableAvailable[firstNonRef].refNum = 1;
 	tableAvailable[firstNonRef].data = newData;
 	ans.availableID = (unsigned char)firstNonRef;
-	ans.tableFlag = pIsPrior ? 0x4 : 0x0;
+	ans.tableFlag = isPrior ? 0x4 : 0x0;
 	return ans;
 }
 
