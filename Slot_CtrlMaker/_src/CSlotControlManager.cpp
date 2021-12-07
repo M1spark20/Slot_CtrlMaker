@@ -556,8 +556,8 @@ int CSlotControlManager::GetActiveFromAvailT(const SControlDataSA& pSAData, bool
 int CSlotControlManager::GetAvailDistance(const unsigned long long pData, const int pPushPos) {
 	int refPos = pPushPos; // LSBが0番のデータ
 	for (int pos = 0; pos < 5; ++pos) {
-		refPos = (refPos + 1) % m_comaMax;			// 滑った後のrefPosを算出
 		if ((pData >> refPos) & 0x1) return pos;	// シフト後LSB=1なら停止可能
+		refPos = (refPos + 1) % m_comaMax;			// 滑った後のrefPosを算出
 	}
 	return -1;
 }
