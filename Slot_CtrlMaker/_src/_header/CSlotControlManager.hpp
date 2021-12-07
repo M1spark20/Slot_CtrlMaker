@@ -31,7 +31,7 @@ class CSlotControlManager {
 	SControlAvailableDef* GetDef();
 	unsigned char* GetSS(bool pGet1st = false);
 	unsigned char Get2ndStyle();
-	void SetComaPos(const int pMoveOrder, const bool pIsReset, const bool pIsUp);
+	bool SetComaPos(const int pMoveOrder, const bool pIsReset, const bool pIsUp);
 	void SwitchATableType();
 	void SetAvailCtrlPattern(unsigned char pNewFlag);
 	void SetAvailShiftConf(unsigned char pNewFlag);

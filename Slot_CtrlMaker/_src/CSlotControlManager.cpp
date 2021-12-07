@@ -144,7 +144,8 @@ void CSlotControlManager::AdjustPos() {
 
 // [act]停止し得る場所へcomaPosを自動調整する
 // [prm]pMoveOrder	: 今回変更するリールの押し順
-void CSlotControlManager::SetComaPos(const int pMoveOrder, const bool pIsReset, const bool pIsUp) {
+// [ret]正しく位置を設定できたか(無効制御有の場合false)
+bool CSlotControlManager::SetComaPos(const int pMoveOrder, const bool pIsReset, const bool pIsUp) {
 	auto& nowMakeData = ctrlData[posData.currentFlagID];
 	auto& srcData = nowMakeData.controlData[posData.stop1st];
 
@@ -157,7 +158,7 @@ void CSlotControlManager::SetComaPos(const int pMoveOrder, const bool pIsReset, 
 		// 使用可能なリール位置でcontinueせず場所が確定(break)する仕組み
 		if (posData.currentOrder == 0) {
 			// 1st変更中：制御をかけない(対象が1stであるか確認する)
-			if (pMoveOrder != 0) return;
+			if (pMoveOrder != 0) return false;
 		} else if (posData.currentOrder == 1) {
 			// 2nd変更中：制御方式PS以外 && 参照1st であれば制御をかける
 			// ※制御方式ComSAにて3rdもこのループを参照、制御はかからない
@@ -166,13 +167,12 @@ void CSlotControlManager::SetComaPos(const int pMoveOrder, const bool pIsReset, 
 				if ((activeData & (1u << diffPos)) == 0x0) continue;
 			}
 			// 条件通過 or 2nd でifを抜ける
-			posData.cursorComa[pMoveOrder] = diffPos; return;
 		} else if (posData.currentOrder == 2) {
 			// 3rd変更中：1st,2ndは必ず制御
 			// ※制御方式ComSAはcurrentOrder == 1にて処理される
 			if (pMoveOrder == 0) {
 				// 1stに制御かけ
-				const auto activeData = srcData.controlData2nd.activeFlag;
+				const auto activeData = srcData.controlData3rd.activeFlag1st;
 				if ((activeData & (1u << diffPos)) == 0x0) continue;
 			} else if (pMoveOrder == 1){
 				// 2ndに制御かけ
@@ -183,8 +183,9 @@ void CSlotControlManager::SetComaPos(const int pMoveOrder, const bool pIsReset, 
 			// 条件通過 or 3rd でifを抜ける
 		}
 		// 場所確定
-		posData.cursorComa[pMoveOrder] = diffPos; return;
+		posData.cursorComa[pMoveOrder] = diffPos; return true;
 	}
+	return false;
 }
 
 int CSlotControlManager::Get2ndReel(bool pIsLeft) {
@@ -494,6 +495,7 @@ unsigned long long CSlotControlManager::GetAvailShiftData(unsigned long long pDa
 	return pData;
 }
 
+// [ret]停止位置 ただし引き込めるものがないときは-1
 int CSlotControlManager::GetPosFromAvailT(const SControlDataSA& pSAData, const int pPushPos, bool pIsLeft) {
 	const unsigned long long allStopFlag = m_allStopFlag;
 	unsigned long long availPos = allStopFlag;
@@ -516,13 +518,17 @@ int CSlotControlManager::GetPosFromAvailT(const SControlDataSA& pSAData, const i
 	}
 
 	// 非停止Tによる位置決定結果を返す
-	return GetAvailDistance(availPos, pPushPos);
+	const int slipNum = GetAvailDistance(availPos, pPushPos);
+	if (slipNum == -1) return -1;
+	return (pPushPos + slipNum) % m_comaMax;
 }
 
+// [ret]停止位置ビット列 ただし無効なコマが1つでもあれば0
 int CSlotControlManager::GetActiveFromAvailT(const SControlDataSA& pSAData, bool pIsLeft) {
 	int ans = 0;
 	for (int pushPos = 0; pushPos < m_comaMax; ++pushPos) {
-		const int availPos = (pushPos + GetPosFromAvailT(pSAData, pushPos, pIsLeft)) % m_comaMax;
+		const int availPos = GetPosFromAvailT(pSAData, pushPos, pIsLeft);
+		if (availPos == -1) return 0;	// 停止位置なしで強制終了
 		ans |= (1 << availPos);
 	}
 	return ans;
