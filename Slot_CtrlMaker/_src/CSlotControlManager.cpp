@@ -570,7 +570,7 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 				drawPos[Get2ndReel(true)  * 2    ] = posData.cursorComa[1];
 				drawPos[Get2ndReel(true)  * 2 + 1] = GetPosFromAvailT(*sa, posData.cursorComa[1], true);
 				drawPos[Get2ndReel(false) * 2    ] = posData.cursorComa[2];
-				drawPos[Get2ndReel(false) * 2 + 1] = GetPosFromAvailT(*sa, posData.cursorComa[1], false);
+				drawPos[Get2ndReel(false) * 2 + 1] = GetPosFromAvailT(*sa, posData.cursorComa[2], false);
 			} else if (posData.currentOrder == 1) {		// 2ndComSAˆÈŠO
 				drawPos[posData.stop1st   * 2    ] = posData.cursorComa[0];
 				drawPos[reelPosByOrder[0] * 2    ] = posData.cursorComa[1];
