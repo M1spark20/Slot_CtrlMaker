@@ -96,11 +96,6 @@ bool CSlotControlManager::Process() {
 		else if (!shiftFlag && key.ExportKeyState(KEY_INPUT_3)) Action(3);
 		else if (!shiftFlag && key.ExportKeyState(KEY_INPUT_4)) Action(4);
 
-		else if (shiftFlag && key.ExportKeyState(KEY_INPUT_0)) SwitchATableType();
-		else if (shiftFlag && key.ExportKeyState(KEY_INPUT_1)) SetAvailCtrlPattern(0);
-		else if (shiftFlag && key.ExportKeyState(KEY_INPUT_2)) SetAvailCtrlPattern(1);
-		else if (shiftFlag && key.ExportKeyState(KEY_INPUT_3)) SetAvailCtrlPattern(2);
-		else if (shiftFlag && key.ExportKeyState(KEY_INPUT_4)) SetAvailCtrlPattern(3);
 		else if (shiftFlag && key.ExportKeyState(KEY_INPUT_5)) SetAvailShiftConf(0);
 		else if (shiftFlag && key.ExportKeyState(KEY_INPUT_6)) SetAvailShiftConf(1);
 		else if (shiftFlag && key.ExportKeyState(KEY_INPUT_7)) SetAvailShiftConf(2);
@@ -108,6 +103,13 @@ bool CSlotControlManager::Process() {
 
 		else if (shiftFlag && key.ExportKeyState(KEY_INPUT_Q)) ActionTableID(true);
 		else if (shiftFlag && key.ExportKeyState(KEY_INPUT_A)) ActionTableID(false);
+
+		// 以下の制御編集はSAで無効データがある場合適用不可
+		else if (!m_isSuspend && shiftFlag && key.ExportKeyState(KEY_INPUT_0)) SwitchATableType();
+		else if (!m_isSuspend && shiftFlag && key.ExportKeyState(KEY_INPUT_1)) SetAvailCtrlPattern(0);
+		else if (!m_isSuspend && shiftFlag && key.ExportKeyState(KEY_INPUT_2)) SetAvailCtrlPattern(1);
+		else if (!m_isSuspend && shiftFlag && key.ExportKeyState(KEY_INPUT_3)) SetAvailCtrlPattern(2);
+		else if (!m_isSuspend && shiftFlag && key.ExportKeyState(KEY_INPUT_4)) SetAvailCtrlPattern(3);
 
 		AdjustPos();
 	}
@@ -534,7 +536,7 @@ int CSlotControlManager::GetPosFromAvailT(const SControlDataSA& pSAData, const i
 			if (isPrior) {	// 優先T
 				availData &= availPos;	// 事前に非停止とされた停止位置を除く
 				const int slip = GetAvailDistance(availData, pPushPos);
-				if (slip >= 0) return slip;
+				if (slip >= 0) return (pPushPos + slip) % m_comaMax;
 			} else {		// 非停止T
 				availPos &= availData;
 			}
