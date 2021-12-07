@@ -120,6 +120,9 @@ void CSlotControlManager::AdjustPos() {
 	const int flagMax = m_flagMax;
 	const int reelMax = m_reelMax;
 
+	while (posData.currentFlagID < 0) posData.currentFlagID += flagMax;
+	while (posData.currentFlagID >= flagMax) posData.currentFlagID -= flagMax;
+
 	for (auto it = posData.cursorComa.begin(); it != posData.cursorComa.end(); ++it) {
 		while (*it < 0) *it += comaMax;
 		while (*it >= comaMax) *it -= comaMax;
@@ -133,9 +136,6 @@ void CSlotControlManager::AdjustPos() {
 	if (Get2ndStyle() == 0x03) orderLim -= 1;
 	while (posData.currentOrder < 0) posData.currentOrder += orderLim;
 	while (posData.currentOrder >= orderLim) posData.currentOrder -= orderLim;
-
-	while (posData.currentFlagID < 0) posData.currentFlagID += flagMax;
-	while (posData.currentFlagID >= flagMax) posData.currentFlagID -= flagMax;
 
 	int selectLim = posData.currentOrder + 1;
 	// 共通制御時2nd/3rdは全リール操作可能とし、isWatchLeftを可変させる
