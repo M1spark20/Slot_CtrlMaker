@@ -138,8 +138,10 @@ void CSlotControlManager::AdjustPos() {
 	while (posData.currentFlagID >= flagMax) posData.currentFlagID -= flagMax;
 
 	int selectLim = posData.currentOrder + 1;
-	// 共通制御時2nd/3rdは全リール操作可能とする
-	if (posData.currentOrder >= 1 && Get2ndStyle() == 0x03) selectLim = m_reelMax;
+	// 共通制御時2nd/3rdは全リール操作可能とし、isWatchLeftを可変させる
+	if (posData.currentOrder >= 1 && Get2ndStyle() == 0x03) {
+		selectLim = m_reelMax;	posData.isWatchLeft = !(posData.selectReel == 2);
+	}
 	while (posData.selectReel < 0) posData.selectReel += selectLim;
 	while (posData.selectReel >= selectLim) posData.selectReel -= selectLim;
 
@@ -201,11 +203,16 @@ int CSlotControlManager::Get2ndReel(bool pIsLeft) {
 
 bool CSlotControlManager::Action(int pNewInput) {
 	bool setAns = true;
+	// 選択中リールと押し位置が一致しない場合データ更新しない
+	// ただしComSAのsel=2, order=1を除く
+	if (posData.selectReel != posData.currentOrder && !(Get2ndStyle() == 0x03 && posData.selectReel == 2 && posData.currentOrder == 1))
+		return true;
+
 	auto refData = GetDef();
 	if (refData != nullptr) {	// SAテーブル
 		int comaIndex = posData.currentOrder;
 		const auto styleData = Get2ndStyle();
-		if(posData.currentOrder >= 1 && styleData == 0x3) comaIndex = posData.currentOrder;
+		if(posData.currentOrder >= 1 && styleData == 0x3) comaIndex = posData.selectReel;
 		*refData = SetAvailT(setAns, refData->availableID, posData.cursorComa[comaIndex], pNewInput, refData->tableFlag & 0x4);
 	} else {					// SSテーブル
 		auto refDataSS = GetSS();
@@ -277,21 +284,19 @@ SControlAvailableDef* CSlotControlManager::GetDef() {
 	auto& nowMakeData = ctrlData[posData.currentFlagID];
 	const auto styleData = Get2ndStyle();
 	auto& nowCtrlData = nowMakeData.controlData[posData.stop1st];
+	const int dataID = posData.selectAvailID + posData.isWatchLeft ? 0 : AVAIL_ID_MAX;
 
 	if (posData.currentOrder == 0) return nullptr;	// 1st制御(=処理なし)
 	if (styleData == 0x3) {							// 2nd以降 2nd/3rdCom制御
 		const int index = posData.cursorComa[0];
-		const int dataID = posData.selectAvailID + (posData.currentOrder - 1) * AVAIL_ID_MAX;
 		return &(nowCtrlData.controlData2nd.controlDataComSA[index].data[dataID]);
 	} else if (posData.currentOrder == 1) {			// 2nd制御
 		if (styleData == 0x2) {						// 2ndStopAvailable(cursorComa[0]に制限あり)
 			const int index = posData.cursorComa[0];
-			const int dataID = posData.selectAvailID + posData.isWatchLeft ? 0 : AVAIL_ID_MAX;
 			return &(nowCtrlData.controlData2nd.controlData2ndSA[index].data[dataID]);
 		}
 	} else if (posData.currentOrder == 2) {			// 3rd制御(非Com)
 		const int index = posData.cursorComa[0] * m_comaMax + posData.cursorComa[1];
-		const int dataID = posData.selectAvailID + posData.isWatchLeft ? 0 : AVAIL_ID_MAX;
 		return &(nowCtrlData.controlData3rd.availableData[index].data[dataID]);
 	}
 	return nullptr;
@@ -651,9 +656,13 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 			if(sa == nullptr) return false;	// この関数内でsa初期化
 			for (int i = 0; i < m_comaMax; ++i) {
 				const int posY = 176 + 26 * (m_comaMax - i - 1);
-				int stopPos = GetPosFromAvailT(*sa, i, posData.isWatchLeft);
-				int showVal = ((stopPos + m_comaMax) - i) % m_comaMax;
-				DxLib::DrawFormatString(281, posY, 0xFFFF00, "%d", showVal);
+				if (!m_isSuspend) {
+					int stopPos = GetPosFromAvailT(*sa, i, posData.isWatchLeft);
+					int showVal = ((stopPos + m_comaMax) - i) % m_comaMax;
+					DxLib::DrawFormatString(281, posY, 0xFFFF00, "%d", showVal);
+				} else {
+					DxLib::DrawString(281, posY, "X", 0xFF0000);
+				}
 			}
 			for (int j = 0; j < AVAIL_ID_MAX; ++j) {
 				const int posX = 307 + 26 * j;
@@ -662,7 +671,6 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 					const int index = j + posData.isWatchLeft ? 0 : AVAIL_ID_MAX;
 					const auto nowTableID = sa->data[index].availableID;
 					stopFlag = GetAvailShiftData(*sa, j, posData.isWatchLeft);
-					if (stopFlag == 0) return false;
 				}
 				for (int pos = 0; pos < m_comaMax; ++pos) {
 					const int posY = 176 + 26 * (m_comaMax - pos - 1);
@@ -671,7 +679,6 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 					stopFlag >>= 1;
 				}
 			}
-			
 		}
 	}
 	return true;
