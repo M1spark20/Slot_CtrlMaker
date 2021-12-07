@@ -9,6 +9,7 @@ bool CSlotControlManager::Init(const SSlotGameDataWrapper& pData) {
 	m_reelMax = pData.reelManager.GetReelNum();
 	m_comaMax = pData.reelManager.GetCharaNum();
 	m_allStopFlag = (unsigned long long)pow(2, pData.reelManager.GetCharaNum()) - 1ull;
+	m_isSuspend = false;
 
 	/* slipT初期化 */ {
 		const unsigned long long allStopFlag = m_allStopFlag;
@@ -47,6 +48,11 @@ bool CSlotControlManager::Init(const SSlotGameDataWrapper& pData) {
 		ctrlData.resize(flagMax, sm);
 		for (size_t i = 0; i < ctrlData.size(); ++i) ctrlData[i].dataID = i;	// 配列要素番号と一致させる
 	}
+
+	// 各フラグに対してActiveフラグ初期化
+	for(posData.currentFlagID = 0; posData.currentFlagID < m_flagMax; ++posData.currentFlagID)
+		UpdateActiveFlag();
+
 	/* posData初期化 */ {
 		posData.currentFlagID = 0;
 		posData.selectReel = 0;
@@ -56,7 +62,6 @@ bool CSlotControlManager::Init(const SSlotGameDataWrapper& pData) {
 		posData.isWatchLeft = true;
 	}
 
-	UpdateActiveFlag();
 	return true;
 }
 
@@ -65,23 +70,24 @@ bool CSlotControlManager::Process() {
 		CKeyExport_S& key = CKeyExport_S::GetInstance();
 		const bool shiftFlag = key.ExportKeyStateFrame(KEY_INPUT_LSHIFT) >= 1 || key.ExportKeyStateFrame(KEY_INPUT_RSHIFT) >= 1;
 		// 位置操作系
-		if (!shiftFlag && key.ExportKeyState(KEY_INPUT_UP))	SetComaPos(posData.selectReel, false, true);
+		if		(!shiftFlag && key.ExportKeyState(KEY_INPUT_UP))	SetComaPos(posData.selectReel, false, true);
 		else if (!shiftFlag && key.ExportKeyState(KEY_INPUT_DOWN))	SetComaPos(posData.selectReel, false, false);
-		else if (!shiftFlag && key.ExportKeyState(KEY_INPUT_LEFT)) {
+		else if (shiftFlag && key.ExportKeyState(KEY_INPUT_LEFT))	--posData.selectAvailID;
+		else if (shiftFlag && key.ExportKeyState(KEY_INPUT_RIGHT))	++posData.selectAvailID;
+		// 以下の位置操作はSAで無効データがある場合適用不可
+		else if (!m_isSuspend && !shiftFlag && key.ExportKeyState(KEY_INPUT_LEFT)) {
 			if (posData.currentOrder == 0)	--posData.stop1st;
 			else							--posData.selectReel;
 		}
-		else if (!shiftFlag && key.ExportKeyState(KEY_INPUT_RIGHT)) {
+		else if (!m_isSuspend && !shiftFlag && key.ExportKeyState(KEY_INPUT_RIGHT)) {
 			if (posData.currentOrder == 0)	++posData.stop1st;
 			else							++posData.selectReel;
 		}
-		else if (shiftFlag && key.ExportKeyState(KEY_INPUT_UP))		--posData.currentFlagID;
-		else if (shiftFlag && key.ExportKeyState(KEY_INPUT_DOWN))	++posData.currentFlagID;
-		else if (shiftFlag && key.ExportKeyState(KEY_INPUT_LEFT))	--posData.selectAvailID;
-		else if (shiftFlag && key.ExportKeyState(KEY_INPUT_RIGHT))	++posData.selectAvailID;
-		else if (!shiftFlag && key.ExportKeyState(KEY_INPUT_PERIOD))++posData.currentOrder;
-		else if (!shiftFlag && key.ExportKeyState(KEY_INPUT_COMMA))	--posData.currentOrder;
-		else if (!shiftFlag && key.ExportKeyState(KEY_INPUT_AT))	posData.isWatchLeft = !posData.isWatchLeft;
+		else if (!m_isSuspend &&  shiftFlag && key.ExportKeyState(KEY_INPUT_UP))	--posData.currentFlagID;
+		else if (!m_isSuspend &&  shiftFlag && key.ExportKeyState(KEY_INPUT_DOWN))	++posData.currentFlagID;
+		else if (!m_isSuspend && !shiftFlag && key.ExportKeyState(KEY_INPUT_PERIOD))++posData.currentOrder;
+		else if (!m_isSuspend && !shiftFlag && key.ExportKeyState(KEY_INPUT_COMMA))	--posData.currentOrder;
+		else if (!m_isSuspend && !shiftFlag && key.ExportKeyState(KEY_INPUT_AT))	posData.isWatchLeft = !posData.isWatchLeft;
 
 		// 制御編集系
 		else if (!shiftFlag && key.ExportKeyState(KEY_INPUT_0)) Action(0);
@@ -425,42 +431,45 @@ bool CSlotControlManager::isSilp() {
 	return !(Get2ndStyle() & 0x2);
 }
 
+// [act]現在選択中フラグの停止可能位置をアップデートする
 bool CSlotControlManager::UpdateActiveFlag() {
-	for (auto dataIt = ctrlData.begin(); dataIt != ctrlData.end(); ++dataIt) {
-		int orderCnt = 0;
-		for (auto ctrlIt = dataIt->controlData.begin(); ctrlIt != dataIt->controlData.end(); ++ctrlIt, ++orderCnt) {
-			const unsigned char IDFirst = ctrlIt->controlData1st;
-			const int active1st = tableSlip[IDFirst].activePos;
-			ctrlIt->controlData2nd.activeFlag = active1st;
-			ctrlIt->controlData3rd.activeFlag1st = active1st;
+	m_isSuspend = false;	// m_isSuspendリセット
+	auto& nowData = ctrlData[posData.currentFlagID];
+	int orderCnt = 0;
+	for (auto ctrlIt = nowData.controlData.begin(); ctrlIt != nowData.controlData.end(); ++ctrlIt, ++orderCnt) {
+		const unsigned char IDFirst = ctrlIt->controlData1st;
+		const int active1st = tableSlip[IDFirst].activePos;
+		ctrlIt->controlData2nd.activeFlag = active1st;
+		ctrlIt->controlData3rd.activeFlag1st = active1st;
 
-			const unsigned char useTable2nd = Get2ndStyle();
-			for (int pushPos = 0; pushPos < m_comaMax*2; ++pushPos) {	// 0:LR, 1:LR, ...
-				const int firstPush = pushPos / 2;
-				const int firstStop = GetPosFromSlipT(ctrlIt->controlData1st, firstPush);
-				const bool lrFlag = (pushPos % 2) == 0;
-				unsigned long long active2nd = 0;
-				if (useTable2nd == 0x0) {
-					int ref2nd = firstPush * 2 + lrFlag;
-					active2nd = tableSlip[ctrlIt->controlData2nd.controlData2ndPS[ref2nd]].activePos;
-				} else if (useTable2nd == 0x1) {
-					int ref2nd = firstStop * 2 + lrFlag;
-					active2nd = tableSlip[ctrlIt->controlData2nd.controlData2ndSS[ref2nd]].activePos;
-				} else if (useTable2nd == 0x2) {
-					int ref2nd = firstStop;
-					active2nd = GetActiveFromAvailT(ctrlIt->controlData2nd.controlData2ndSA[ref2nd], lrFlag);
-				} else if (useTable2nd == 0x3) {
-					int ref2nd = firstStop;
-					active2nd = GetActiveFromAvailT(ctrlIt->controlData2nd.controlDataComSA[ref2nd], lrFlag);
-				} else {
-					return false;
-				}
+		const unsigned char useTable2nd = Get2ndStyle();
+		for (int pushPos = 0; pushPos < m_comaMax*2; ++pushPos) {	// 0:LR, 1:LR, ...
+			const bool lrFlag = ((pushPos % m_comaMax) == 0);
+			unsigned long long active2nd = 0;
+			if (useTable2nd == 0x0) {
+				const int ref2nd = (pushPos % m_comaMax) + (m_comaMax * (pushPos / m_comaMax));
+				active2nd = tableSlip[ctrlIt->controlData2nd.controlData2ndPS[ref2nd]].activePos;
+			} else if (useTable2nd == 0x1) {
+				const int ref2nd = (pushPos % m_comaMax) + (m_comaMax * (pushPos / m_comaMax));
+				active2nd = tableSlip[ctrlIt->controlData2nd.controlData2ndSS[ref2nd]].activePos;
+			} else if (useTable2nd == 0x2) {
+				const int ref2nd = pushPos % m_comaMax;
+				active2nd = GetActiveFromAvailT(ctrlIt->controlData2nd.controlData2ndSA[ref2nd], lrFlag);
+				// 引込不可時無効データ -> m_isSuspendをtrueにして終了
+				if (active2nd == 0) { m_isSuspend = true; return true; }
+			} else if (useTable2nd == 0x3) {
+				const int ref2nd = pushPos % m_comaMax;
+				active2nd = GetActiveFromAvailT(ctrlIt->controlData2nd.controlDataComSA[ref2nd], lrFlag);
+				// 引込不可時無効データ -> m_isSuspendをtrueにして終了
+				if (active2nd == 0) { m_isSuspend = true; return true; }
+			} else {
+				return false;
+			}
 
-				if (lrFlag == 0) {
-					ctrlIt->controlData3rd.activeFlag2nd[pushPos / 2] = active2nd;
-				} else {
-					ctrlIt->controlData3rd.activeFlag2nd[pushPos / 2] |= (active2nd << m_comaMax);
-				}
+			if (lrFlag) {
+				ctrlIt->controlData3rd.activeFlag2nd[pushPos / 2] = active2nd;
+			} else {
+				ctrlIt->controlData3rd.activeFlag2nd[pushPos / 2] |= (active2nd << m_comaMax);
 			}
 		}
 	}

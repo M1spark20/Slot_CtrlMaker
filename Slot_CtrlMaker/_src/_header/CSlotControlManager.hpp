@@ -17,6 +17,7 @@ class CSlotControlManager {
 	int m_reelMax;
 	int m_comaMax;
 	unsigned long long m_allStopFlag;
+	bool m_isSuspend;					// SAで無効データがある場合trueにして編集対象をロックする
 
 	std::vector<SControlMakeData>	ctrlData;
 	std::vector<SControlTable>		tableSlip;
