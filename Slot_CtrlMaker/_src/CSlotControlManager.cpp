@@ -654,22 +654,24 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 				int stopPos = GetPosFromAvailT(*sa, i, posData.isWatchLeft);
 				int showVal = ((stopPos + m_comaMax) - i) % m_comaMax;
 				DxLib::DrawFormatString(281, posY, 0xFFFF00, "%d", showVal);
-				for (int j = 0; j < AVAIL_ID_MAX; ++j) {
-					const int posX = 307 + 26 * j;
-					unsigned long long stopFlag = 0;
-					/* ’âŽ~ˆÊ’uŒÄ‚Ño‚µ */ {
-						const int index = j + posData.isWatchLeft ? 0 : AVAIL_ID_MAX;
-						const auto nowTableID = sa->data[index].availableID;
-						stopFlag = GetAvailShiftData(*sa, j, posData.isWatchLeft);
-						if (stopFlag == 0) return false;
-					}
-					for (int pos = 0; pos < m_comaMax; ++pos) {
-						const std::string drawStr = (stopFlag & 0x1) ? "@" : "-";
-						DxLib::DrawFormatString(posX, posY, 0xFFFF00, "%s", drawStr.c_str());
-						stopFlag >>= 1;
-					}
+			}
+			for (int j = 0; j < AVAIL_ID_MAX; ++j) {
+				const int posX = 307 + 26 * j;
+				unsigned long long stopFlag = 0;
+				/* ’âŽ~ˆÊ’uŒÄ‚Ño‚µ */ {
+					const int index = j + posData.isWatchLeft ? 0 : AVAIL_ID_MAX;
+					const auto nowTableID = sa->data[index].availableID;
+					stopFlag = GetAvailShiftData(*sa, j, posData.isWatchLeft);
+					if (stopFlag == 0) return false;
+				}
+				for (int pos = 0; pos < m_comaMax; ++pos) {
+					const int posY = 176 + 26 * (m_comaMax - pos - 1);
+					const std::string drawStr = (stopFlag & 0x1) ? "@" : "-";
+					DxLib::DrawFormatString(posX, posY, 0xFFFF00, "%s", drawStr.c_str());
+					stopFlag >>= 1;
 				}
 			}
+			
 		}
 	}
 	return true;
