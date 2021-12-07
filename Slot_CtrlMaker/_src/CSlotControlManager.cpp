@@ -284,7 +284,7 @@ SControlAvailableDef* CSlotControlManager::GetDef() {
 	auto& nowMakeData = ctrlData[posData.currentFlagID];
 	const auto styleData = Get2ndStyle();
 	auto& nowCtrlData = nowMakeData.controlData[posData.stop1st];
-	const int dataID = posData.selectAvailID + posData.isWatchLeft ? 0 : AVAIL_ID_MAX;
+	const int dataID = posData.selectAvailID + (posData.isWatchLeft ? 0 : AVAIL_ID_MAX);
 
 	if (posData.currentOrder == 0) return nullptr;	// 1st制御(=処理なし)
 	if (styleData == 0x3) {							// 2nd以降 2nd/3rdCom制御
@@ -640,6 +640,7 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 		DxLib::DrawFormatString(277, 80, 0xFFFF00, "ctrlType      : %s", ctrlType[Get2ndStyle()].c_str());
 		DxLib::DrawFormatString(277,100, 0xFFFF00, "currentComa   : %d, %d, %d", 
 			posData.cursorComa[0], posData.cursorComa[1], posData.cursorComa[2]);
+		DxLib::DrawFormatString(277,120, 0xFFFF00, "selectAvailID : %d", posData.selectAvailID);
 	}
 
 	/* テーブル描画・テーブル番号描画 */ {
