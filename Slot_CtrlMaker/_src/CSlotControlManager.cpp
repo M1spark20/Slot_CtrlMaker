@@ -96,21 +96,21 @@ bool CSlotControlManager::Process() {
 		else if (!shiftFlag && key.ExportKeyState(KEY_INPUT_3)) Action(3);
 		else if (!shiftFlag && key.ExportKeyState(KEY_INPUT_4)) Action(4);
 
+		else if (shiftFlag && key.ExportKeyState(KEY_INPUT_0)) SwitchATableType();
 		else if (shiftFlag && key.ExportKeyState(KEY_INPUT_5)) SetAvailShiftConf(0);
 		else if (shiftFlag && key.ExportKeyState(KEY_INPUT_6)) SetAvailShiftConf(1);
 		else if (shiftFlag && key.ExportKeyState(KEY_INPUT_7)) SetAvailShiftConf(2);
 		else if (shiftFlag && key.ExportKeyState(KEY_INPUT_8)) SetAvailShiftConf(3);
 
-		else if (shiftFlag && key.ExportKeyState(KEY_INPUT_Q)) ActionTableID(true);
-		else if (shiftFlag && key.ExportKeyState(KEY_INPUT_A)) ActionTableID(false);
 
 		// 以下の制御編集はSAで無効データがある場合適用不可
-		else if (!m_isSuspend && shiftFlag && key.ExportKeyState(KEY_INPUT_0)) SwitchATableType();
 		else if (!m_isSuspend && shiftFlag && key.ExportKeyState(KEY_INPUT_1)) SetAvailCtrlPattern(0);
 		else if (!m_isSuspend && shiftFlag && key.ExportKeyState(KEY_INPUT_2)) SetAvailCtrlPattern(1);
 		else if (!m_isSuspend && shiftFlag && key.ExportKeyState(KEY_INPUT_3)) SetAvailCtrlPattern(2);
 		else if (!m_isSuspend && shiftFlag && key.ExportKeyState(KEY_INPUT_4)) SetAvailCtrlPattern(3);
 
+		else if (!m_isSuspend && shiftFlag && key.ExportKeyState(KEY_INPUT_Q)) ActionTableID(true);
+		else if (!m_isSuspend && shiftFlag && key.ExportKeyState(KEY_INPUT_A)) ActionTableID(false);
 		AdjustPos();
 	}
 	return true;
@@ -337,6 +337,7 @@ void CSlotControlManager::SetAvailCtrlPattern(unsigned char pNewFlag) {
 	nowMakeData.controlStyle &= ~(0x03 << offset);
 	// 新規設定導入
 	nowMakeData.controlStyle |= ((pNewFlag & 0x03) << offset);
+	UpdateActiveFlag();
 }
 
 // [act]SAテーブルタイプ決定(非停止T, 優先T)
@@ -346,6 +347,7 @@ void CSlotControlManager::SwitchATableType() {
 	// 新規フラグ設定
 	const auto nowFlag = refData->tableFlag & 0x04;
 	refData->tableFlag = (refData->tableFlag & 0xFB) | (~nowFlag & 0x04);
+	UpdateActiveFlag();
 }
 
 // [act]SAシフト切り替え(0:シフト無, 1:下1コマ, 2:上1コマ, 3:反転)
@@ -354,6 +356,7 @@ void CSlotControlManager::SetAvailShiftConf(unsigned char pNewFlag) {
 	if (refData == nullptr) return;
 	// 新規フラグ設定
 	refData->tableFlag = (refData->tableFlag & 0xfc) | (pNewFlag & 0x03);
+	UpdateActiveFlag();
 }
 
 // [act]スベリT更新、テーブルNoの付与・採番まで行う
