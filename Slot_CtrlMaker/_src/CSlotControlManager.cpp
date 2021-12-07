@@ -504,6 +504,15 @@ unsigned long long CSlotControlManager::GetAvailShiftData(unsigned long long pDa
 	return pData;
 }
 
+unsigned long long CSlotControlManager::GetAvailShiftData(const SControlDataSA& pSAData, const int pIndex, bool pIsLeft) {
+	if (pIndex < 0 || pIndex >= AVAIL_ID_MAX) return 0;
+	const auto index   = pIndex + (pIsLeft ? 0 : AVAIL_ID_MAX);
+	const auto tableNo = pSAData.data[index].availableID;
+	const auto data    = tableAvailable[tableNo].data;
+	const auto flag    = pSAData.data[index].tableFlag;
+	return GetAvailShiftData(data, flag);
+}
+
 // [ret]停止位置 ただし引き込めるものがないときは-1
 int CSlotControlManager::GetPosFromAvailT(const SControlDataSA& pSAData, const int pPushPos, bool pIsLeft) {
 	const unsigned long long allStopFlag = m_allStopFlag;
@@ -623,6 +632,8 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 		DxLib::DrawFormatString(277, 60, 0xFFFF00, "stop1st       : %d", posData.stop1st);
 		const std::string ctrlType[] = {"PushS", "StopS", "2ndSA", "ComSA"};
 		DxLib::DrawFormatString(277, 80, 0xFFFF00, "ctrlType      : %s", ctrlType[Get2ndStyle()].c_str());
+		DxLib::DrawFormatString(277,100, 0xFFFF00, "currentComa   : %d, %d, %d", 
+			posData.cursorComa[0], posData.cursorComa[1], posData.cursorComa[2]);
 	}
 
 	/* テーブル描画・テーブル番号描画 */ {
@@ -643,6 +654,21 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 				int stopPos = GetPosFromAvailT(*sa, i, posData.isWatchLeft);
 				int showVal = ((stopPos + m_comaMax) - i) % m_comaMax;
 				DxLib::DrawFormatString(281, posY, 0xFFFF00, "%d", showVal);
+				for (int j = 0; j < AVAIL_ID_MAX; ++j) {
+					const int posX = 307 + 26 * j;
+					unsigned long long stopFlag = 0;
+					/* 停止位置呼び出し */ {
+						const int index = j + posData.isWatchLeft ? 0 : AVAIL_ID_MAX;
+						const auto nowTableID = sa->data[index].availableID;
+						stopFlag = GetAvailShiftData(*sa, j, posData.isWatchLeft);
+						if (stopFlag == 0) return false;
+					}
+					for (int pos = 0; pos < m_comaMax; ++pos) {
+						const std::string drawStr = (stopFlag & 0x1) ? "@" : "-";
+						DxLib::DrawFormatString(posX, posY, 0xFFFF00, "%s", drawStr.c_str());
+						stopFlag >>= 1;
+					}
+				}
 			}
 		}
 	}

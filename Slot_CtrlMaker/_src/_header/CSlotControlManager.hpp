@@ -40,6 +40,7 @@ class CSlotControlManager {
 	bool UpdateActiveFlag();
 	int Get2ndReel(bool pIsLeft);
 	unsigned long long GetAvailShiftData(unsigned long long pData, const unsigned char pShiftFlag);
+	unsigned long long GetAvailShiftData(const SControlDataSA& pSAData, const int pIndex, bool pIsLeft);
 
 	int  GetPosFromSlipT(const size_t pTableNo, const int pPushPos);
 	int  GetPosFromAvailT(const SControlDataSA& pSAData, const int pPushPos, bool pIsLeft);
