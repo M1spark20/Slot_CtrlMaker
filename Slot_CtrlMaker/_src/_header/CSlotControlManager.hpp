@@ -37,7 +37,7 @@ class CSlotControlManager {
 	void SetAvailShiftConf(unsigned char pNewFlag);
 	bool isSilp();
 	bool UpdateActiveFlag();
-	bool JudgeComLR();
+	//bool JudgeComLR();
 	unsigned long long GetAvailShiftData(unsigned long long pData, const unsigned char pShiftFlag);
 
 	int  GetPosFromSlipT(const size_t pTableNo, const int pPushPos);

@@ -65,10 +65,16 @@ bool CSlotControlManager::Process() {
 		CKeyExport_S& key = CKeyExport_S::GetInstance();
 		const bool shiftFlag = key.ExportKeyStateFrame(KEY_INPUT_LSHIFT) >= 1 || key.ExportKeyStateFrame(KEY_INPUT_RSHIFT) >= 1;
 		// 位置操作系
-		if (!shiftFlag && key.ExportKeyState(KEY_INPUT_UP))	SetComaPos(posData.currentOrder, false, true);
-		else if (!shiftFlag && key.ExportKeyState(KEY_INPUT_DOWN))	SetComaPos(posData.currentOrder, false, false);
-		else if (!shiftFlag && key.ExportKeyState(KEY_INPUT_LEFT))	--posData.selectReel;
-		else if (!shiftFlag && key.ExportKeyState(KEY_INPUT_RIGHT))	++posData.selectReel;
+		if (!shiftFlag && key.ExportKeyState(KEY_INPUT_UP))	SetComaPos(posData.selectReel, false, true);
+		else if (!shiftFlag && key.ExportKeyState(KEY_INPUT_DOWN))	SetComaPos(posData.selectReel, false, false);
+		else if (!shiftFlag && key.ExportKeyState(KEY_INPUT_LEFT)) {
+			if (posData.currentOrder == 0)	--posData.stop1st;
+			else							--posData.selectReel;
+		}
+		else if (!shiftFlag && key.ExportKeyState(KEY_INPUT_RIGHT)) {
+			if (posData.currentOrder == 0)	++posData.stop1st;
+			else							++posData.selectReel;
+		}
 		else if (shiftFlag && key.ExportKeyState(KEY_INPUT_UP))		--posData.currentFlagID;
 		else if (shiftFlag && key.ExportKeyState(KEY_INPUT_DOWN))	++posData.currentFlagID;
 		else if (shiftFlag && key.ExportKeyState(KEY_INPUT_LEFT))	--posData.selectAvailID;
@@ -113,17 +119,23 @@ void CSlotControlManager::AdjustPos() {
 		while (*it >= comaMax) *it -= comaMax;
 	}
 
-	if (posData.currentOrder < 0) posData.currentOrder = 0;
-	if (posData.currentOrder >= reelMax) posData.currentOrder = reelMax - 1;
+	while (posData.stop1st < 0) posData.stop1st += reelMax;
+	while (posData.stop1st >= reelMax) posData.stop1st -= reelMax;
+
+	int orderLim = reelMax;
+	// 共通制御時2nd/3rdはcurrentOrder = 1で頭打ち
+	if (Get2ndStyle() == 0x03) orderLim -= 1;
+	while (posData.currentOrder < 0) posData.currentOrder += orderLim;
+	while (posData.currentOrder >= orderLim) posData.currentOrder -= orderLim;
 
 	while (posData.currentFlagID < 0) posData.currentFlagID += flagMax;
 	while (posData.currentFlagID >= flagMax) posData.currentFlagID -= flagMax;
 
-	int selectLim = m_reelMax;
-	if (posData.currentOrder == 1 && Get2ndStyle() != 0x03) selectLim -= 1;
+	int selectLim = posData.currentOrder + 1;
+	// 共通制御時2nd/3rdは全リール操作可能とする
+	if (posData.currentOrder >= 1 && Get2ndStyle() == 0x03) selectLim = m_reelMax;
 	while (posData.selectReel < 0) posData.selectReel += selectLim;
 	while (posData.selectReel >= selectLim) posData.selectReel -= selectLim;
-	if (posData.currentOrder == 0) posData.stop1st = posData.selectReel;
 
 	if (isSilp()) posData.selectAvailID = 0;
 	while (posData.selectAvailID < 0) posData.selectAvailID += AVAIL_ID_MAX;
@@ -131,62 +143,59 @@ void CSlotControlManager::AdjustPos() {
 }
 
 // [act]停止し得る場所へcomaPosを自動調整する
-// [prm]pMoveOrder	: 現在参照中の押し順
+// [prm]pMoveOrder	: 今回変更するリールの押し順
 void CSlotControlManager::SetComaPos(const int pMoveOrder, const bool pIsReset, const bool pIsUp) {
 	auto& nowMakeData = ctrlData[posData.currentFlagID];
 	auto& srcData = nowMakeData.controlData[posData.stop1st];
-	const auto styleData = Get2ndStyle();
 
 	for (int i = pIsReset ? 0 : 1; i < m_comaMax; ++i) {
 		int diffPos = pIsReset ? 0 : posData.cursorComa[pMoveOrder];
 		diffPos += pIsUp ? i : -i;
 		while (diffPos < 0)				diffPos += m_comaMax;
 		while (diffPos >= m_comaMax)	diffPos -= m_comaMax;
+
+		// 使用可能なリール位置でcontinueせず場所が確定(break)する仕組み
 		if (posData.currentOrder == 0) {
+			// 1st変更中：制御をかけない(対象が1stであるか確認する)
 			if (pMoveOrder != 0) return;
-			posData.cursorComa[pMoveOrder] = diffPos; return;
-		} else if (styleData == 0x3) {
-			if(pMoveOrder == 0) {
+		} else if (posData.currentOrder == 1) {
+			// 2nd変更中：制御方式PS以外 && 参照1st であれば制御をかける
+			// ※制御方式ComSAにて3rdもこのループを参照、制御はかからない
+			if(Get2ndStyle() != 0 && pMoveOrder == 0) {
 				const auto activeData = srcData.controlData2nd.activeFlag;
 				if ((activeData & (1u << diffPos)) == 0x0) continue;
-				posData.cursorComa[pMoveOrder] = diffPos; return;
-			} else if (pMoveOrder == 1) { posData.cursorComa[pMoveOrder] = diffPos; return; }
-		}
-		else if (posData.currentOrder == 1) {
-			// PosSlipTなら無条件採用(滑らせるため)
-			if (styleData == 0x0) {
-				posData.cursorComa[pMoveOrder] = diffPos; return;
-			} else if (pMoveOrder == 0) {
-				const auto activeData = srcData.controlData2nd.activeFlag;
-				if ((activeData & (1u << diffPos)) == 0x0) continue;
-				posData.cursorComa[pMoveOrder] = diffPos; return;
-			} else if (pMoveOrder == 1) { posData.cursorComa[pMoveOrder] = diffPos; return; }
-		}
-		else if (posData.currentOrder == 2) {
-			if (pMoveOrder == 0) {
-				const auto activeData = srcData.controlData3rd.activeFlag1st;
-				if ((activeData & (1u << diffPos)) == 0x0) continue;
-				posData.cursorComa[pMoveOrder] = diffPos; return;
 			}
-			if (pMoveOrder == 1) {
+			// 条件通過 or 2nd でifを抜ける
+			posData.cursorComa[pMoveOrder] = diffPos; return;
+		} else if (posData.currentOrder == 2) {
+			// 3rd変更中：1st,2ndは必ず制御
+			// ※制御方式ComSAはcurrentOrder == 1にて処理される
+			if (pMoveOrder == 0) {
+				// 1stに制御かけ
+				const auto activeData = srcData.controlData2nd.activeFlag;
+				if ((activeData & (1u << diffPos)) == 0x0) continue;
+			} else if (pMoveOrder == 1){
+				// 2ndに制御かけ
 				const auto activeData = srcData.controlData3rd.activeFlag2nd[posData.cursorComa[0]];
 				int shiftNum = diffPos + (posData.isWatchLeft ? 0 : m_comaMax);
 				if ((activeData & (1ull << shiftNum)) == 0x0) continue;
-				posData.cursorComa[pMoveOrder] = diffPos; return;
 			}
-			if (pMoveOrder == 2) { posData.cursorComa[pMoveOrder] = diffPos; return; }
+			// 条件通過 or 3rd でifを抜ける
 		}
+		// 場所確定
+		posData.cursorComa[pMoveOrder] = diffPos; return;
 	}
 }
 
-bool CSlotControlManager::JudgeComLR() {
+/*bool CSlotControlManager::JudgeComLR() {
 	if (posData.currentOrder == 0) return false;
+	const int ref = posData.stop1st == 0 ? 1 : 0;
 	for (int i = 0; i < m_reelMax; ++i) {
 		if (i == posData.stop1st) continue;
 		return i == posData.selectReel;
 	}
 	return false;
-}
+}*/
 
 bool CSlotControlManager::Action(int pNewInput) {
 	bool setAns = true;
@@ -194,7 +203,7 @@ bool CSlotControlManager::Action(int pNewInput) {
 	if (refData != nullptr) {	// SAテーブル
 		int comaIndex = posData.currentOrder;
 		const auto styleData = Get2ndStyle();
-		if(posData.currentOrder >= 1 && styleData == 0x3) comaIndex = JudgeComLR() ? 1 : 2;
+		if(posData.currentOrder >= 1 && styleData == 0x3) comaIndex = posData.currentOrder;
 		*refData = SetAvailT(setAns, refData->availableID, posData.cursorComa[comaIndex], pNewInput, refData->tableFlag & 0x4);
 	} else {					// SSテーブル
 		auto refDataSS = GetSS();
@@ -270,7 +279,7 @@ SControlAvailableDef* CSlotControlManager::GetDef() {
 	if (posData.currentOrder == 0) return nullptr;	// 1st制御(=処理なし)
 	if (styleData == 0x3) {							// 2nd以降 2nd/3rdCom制御
 		const int index = posData.cursorComa[0];
-		const int dataID = posData.selectAvailID + JudgeComLR() ? 0 : AVAIL_ID_MAX;
+		const int dataID = posData.selectAvailID + (posData.currentOrder - 1) * AVAIL_ID_MAX;
 		return &(nowCtrlData.controlData2nd.controlDataComSA[index].data[dataID]);
 	} else if (posData.currentOrder == 1) {			// 2nd制御
 		if (styleData == 0x2) {						// 2ndStopAvailable(cursorComa[0]に制限あり)
