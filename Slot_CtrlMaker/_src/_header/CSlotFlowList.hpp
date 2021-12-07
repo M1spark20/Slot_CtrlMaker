@@ -7,4 +7,5 @@ public:
 	CSlotFlowMakeControl1st();
 	bool Init(SSlotGameDataWrapper& pGameData) override;
 	ESlotFlowFlag Process(SSlotGameDataWrapper& pGameData) override;
+	bool Draw(SSlotGameDataWrapper& pGameData) override;
 };

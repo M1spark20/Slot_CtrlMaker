@@ -4,6 +4,7 @@
 #include "CSlotTimerManager.hpp"
 #include "CSlotCastChecker.hpp"
 #include "CRestoreManager.hpp"
+#include "CSlotControlManager.hpp"
 
 struct SSlotGameDataWrapper{
 	CReelManager				reelManager;

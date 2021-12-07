@@ -1,6 +1,13 @@
 #pragma once
 #include <vector>
 
+// スベリT, 引込Tデータ
+struct SControlTable {
+	unsigned long long	data;		// 64bit変数 スベリTは49bit, 引込Tは21bit使用 [20,19,18,...,0]LSB
+	unsigned int		activePos;	// (内部データ,slipTのみ使用)停止可能位置メモ
+	int					refNum;		// 参照数指定、データの追加・削除に使用
+};
+
 // 引込T定義データ
 struct SControlAvailableDef {
 	/* 3bit -> 1bit:フラグ(0:非停止T,1:優先T), 2bit:シフト(00:無, 01:下1コマ, 10: 上1コマ, 11:反転) */
@@ -8,30 +15,23 @@ struct SControlAvailableDef {
 	unsigned char						availableID;		// 引込T_ID(0-255)
 };
 
-// 2nd停止位置(Stop)スベリ(Slip)T データ型
-struct SControlDataSS {
-	unsigned int						activeFlag;			// 停止可否(0:非停止/1:停止, max32bit)
-	std::vector<unsigned char>			activeSlipID;		// 2nd押し位置(Push)スベリ(Slip)T 8bit:SlipT_ID (停止可能な場所のみ定義)
-};
-
-// 2nd(/3rd)停止位置(Stop)引込(Available)T データ型
 struct SControlDataSA {
-	unsigned int						activeFlag;			// 停止可否(0:非停止/1:停止, max32bit)
-	std::vector<SControlAvailableDef>	availableData;		// 引込T(2個ずつ定義する)
+	std::vector<SControlAvailableDef>	data;				// 引込T指定 最大4つ*2(LR)まで定義できる
 };
 
 struct SControlMakeData2nd {
-	// 以下は使用する物のみにデータを入れる
-	std::vector<unsigned char>			controlData2ndPS;	// 2nd押し位置(Push)スベリ(Slip)T 8bit:SlipT_ID * reelComa
-	std::vector<SControlDataSS>			controlData2ndSS;	// 2nd停止位置スベリ(Slip)T
-	std::vector<SControlDataSA>			controlData2ndSA;	// 2nd停止位置(Stop)引込(Available)T
-	std::vector<SControlDataSA>			controlDataComSA;	// 2nd/3rd停止位置(Stop)引込(Available)T (3rd使いまわし)
+	// 以下は位置毎に管理し、書き出すときに使用するもののみ適用
+	unsigned int						activeFlag;			// 停止可否(0:非停止/1:停止, max32bit)
+	std::vector<unsigned char>			controlData2ndPS;	// 2nd押し位置(Push)スベリ(Slip)T 8bit:SlipT_ID * reelComa*2
+	std::vector<unsigned char>			controlData2ndSS;	// 2nd停止位置スベリ(Slip)T 8bit:SlipT_ID * reelComa(非停止位置も定義)
+	std::vector<SControlDataSA>			controlData2ndSA;	// 2nd停止位置(Stop)引込(Available)T 8bit:AvailT_ID * reelComa(非停止位置も定義)
+	std::vector<SControlDataSA>			controlDataComSA;	// 2nd/3rd停止位置(Stop)引込(Available)T 8bit:AvailT_ID * reelComa(3rd使いまわし)
 };
 
 struct SControlMakeData3rd {
 	unsigned int						activeFlag1st;		// 停止可否1st(0:非停止/1:停止, max32bit)
-	std::vector<unsigned int>			activeFlag2nd;		// 停止可否1st(0:非停止/1:停止, max32bit) 1st存在する場所のみ
-	std::vector<SControlAvailableDef>	availableData;		// 引込T(1個ずつ定義する)
+	std::vector<unsigned long long>		activeFlag2nd;		// 停止可否2nd(0:非停止/1:停止, max64bit 1st左→右) 1st存在しない場所含む
+	std::vector<SControlDataSA>			availableData;		// 引込T(1個ずつ定義する) order: (1st,2nd,LR) = 00L, 00R, 01L ... 0KR, 10L, 10R, ...
 };
 
 struct SControlMakeDataWrapper {
@@ -42,6 +42,7 @@ struct SControlMakeDataWrapper {
 
 struct SControlMakeData {
 	unsigned char						dataID;				// use 8bit
+	/* 00:2nd押し位置スベリT, 01:2nd停止位置スベリT, 10:2nd停止位置引込T, 11:2nd/3rd共通引込T */
 	unsigned char						controlStyle;		// use 6bit
-	SControlMakeDataWrapper				controlData;		// reelNum分定義する
+	std::vector<SControlMakeDataWrapper>controlData;		// 制御データ(LCR)
 };

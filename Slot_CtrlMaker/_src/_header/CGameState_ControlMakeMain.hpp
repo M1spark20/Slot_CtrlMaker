@@ -8,6 +8,7 @@ class CGameDataManage;
 class CGameState_ControlMakerMain : public IGameStateBase {
 
 	SSlotGameDataWrapper	m_data;
+	CSlotControlManager		m_controlManager;
 
 	ISlotFlowManager*		m_pFlowManager;
 	int						mDisplayW, mDisplayH;

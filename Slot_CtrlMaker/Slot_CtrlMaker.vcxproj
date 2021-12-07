@@ -166,6 +166,7 @@
     <ClCompile Include="_src\CReelManager.cpp" />
     <ClCompile Include="_src\CRestoreManager.cpp" />
     <ClCompile Include="_src\CSlotCastChecker.cpp" />
+    <ClCompile Include="_src\CSlotControlManager.cpp" />
     <ClCompile Include="_src\CSlotFlowList.cpp" />
     <ClCompile Include="_src\CSlotTimerManager.cpp" />
     <ClCompile Include="_src\ErrClass.cpp" />
@@ -192,6 +193,7 @@
     <ClInclude Include="_src\_header\CReelManager.hpp" />
     <ClInclude Include="_src\_header\CRestoreManager.hpp" />
     <ClInclude Include="_src\_header\CSlotCastChecker.hpp" />
+    <ClInclude Include="_src\_header\CSlotControlManager.hpp" />
     <ClInclude Include="_src\_header\CSlotFlowList.hpp" />
     <ClInclude Include="_src\_header\CSlotTimerManager.hpp" />
     <ClInclude Include="_src\_header\EChangeModeFlag.h" />
@@ -208,6 +210,7 @@
     <ClInclude Include="_src\_header\keyinput.h" />
     <ClInclude Include="_src\_header\SCastData.hpp" />
     <ClInclude Include="_src\_header\SControlMakeData.hpp" />
+    <ClInclude Include="_src\_header\SControlPositionData.hpp" />
     <ClInclude Include="_src\_header\selectmode.h" />
     <ClInclude Include="_src\_header\setup.h" />
     <ClInclude Include="_src\_header\SMainReadFileIndex.h" />

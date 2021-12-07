@@ -15,6 +15,11 @@ bool CGameState_ControlMakerMain::Init(CGameDataManage& pDataManageIns) {
 	if (!m_data.castChecker.Init(pDataManageIns, sysReader.GetSysDataID("cast")))	return false;
 	if (!m_data.timeManager.Init(m_data.reelManager.GetReelNum()))					return false;
 
+	// controlManagerをデータ有で再初期化
+	m_controlManager.Init(m_data);
+
+	if (!m_controlManager.Init(m_data))	return false;
+
 	// 縮小用画面生成
 	DxLib::GetScreenState(&mDisplayW, &mDisplayH, NULL);
 	// mBGWindow(縮小用)はProcess初回呼び出し時に定義
@@ -37,6 +42,7 @@ EChangeStateFlag CGameState_ControlMakerMain::Process(CGameDataManage& pDataMana
 		return EChangeStateFlag::eStateEnd;
 
 	m_data.timeManager.Process();
+	m_controlManager.Process();
 	ESlotFlowFlag flow = m_pFlowManager->Process(m_data);
 	if (flow != ESlotFlowFlag::eFlowContinue) {
 		delete m_pFlowManager;	m_pFlowManager = nullptr;
@@ -78,21 +84,7 @@ bool CGameState_ControlMakerMain::Draw(CGameDataManage& pDataManageIns) {
 	DxLib::SetDrawScreen(mBGWindow);
 	DxLib::ClearDrawScreen();
 
-	SReelDrawData drawReel;
-	/* SReelDrawData初期作成 */ {
-		drawReel.y = 1;
-		drawReel.comaW = 77; drawReel.comaH = 35; drawReel.comaNum = 3;
-		drawReel.offsetLower = 10; drawReel.offsetUpper = 10;
-	}
-	for (size_t i = 0; i < 3; ++i) {
-		drawReel.x = 502 + 78 * i; drawReel.reelID = i;
-		m_data.reelManager.DrawReel(pDataManageIns, drawReel, mBGWindow);
-		drawReel.x = 768 + 78 * i;
-		m_data.reelManager.DrawReel(pDataManageIns, drawReel, mBGWindow);
-	}
-	/*m_data.effectManager.Draw(pDataManageIns, m_data.timeManager, mBGWindow);
-	m_data.effectManager.RingSound(m_data.timeManager, pDataManageIns);
-	m_menuManager.Draw(mBGWindow);*/
+	m_controlManager.Draw(m_data, pDataManageIns, mBGWindow);
 
 	DxLib::SetDrawScreen(DX_SCREEN_BACK);
 	DxLib::SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 255);
