@@ -37,6 +37,7 @@ class CSlotControlManager {
 	void SetAvailCtrlPattern(unsigned char pNewFlag);
 	void SetAvailShiftConf(unsigned char pNewFlag);
 	bool isSilp();
+	bool canChangeTable();
 	bool UpdateActiveFlag();
 	int Get2ndReel(bool pIsLeft);
 	unsigned long long GetAvailShiftData(unsigned long long pData, const unsigned char pShiftFlag);

@@ -152,6 +152,14 @@ void CSlotControlManager::AdjustPos() {
 	while (posData.selectAvailID >= AVAIL_ID_MAX) posData.selectAvailID -= AVAIL_ID_MAX;
 }
 
+bool CSlotControlManager::canChangeTable() {
+	// 選択中リールと押し位置が一致しない場合データ更新しない
+	// ただしComSAのsel=2, order=1を除く
+	if (posData.selectReel != posData.currentOrder && !(Get2ndStyle() == 0x03 && posData.selectReel == 2 && posData.currentOrder == 1))
+		return false;
+	return true;
+}
+
 // [act]停止し得る場所へcomaPosを自動調整する
 // [prm]pMoveOrder	: 今回変更するリールの押し順
 // [ret]正しく位置を設定できたか(無効制御有の場合false)
@@ -205,10 +213,7 @@ int CSlotControlManager::Get2ndReel(bool pIsLeft) {
 
 bool CSlotControlManager::Action(int pNewInput) {
 	bool setAns = true;
-	// 選択中リールと押し位置が一致しない場合データ更新しない
-	// ただしComSAのsel=2, order=1を除く
-	if (posData.selectReel != posData.currentOrder && !(Get2ndStyle() == 0x03 && posData.selectReel == 2 && posData.currentOrder == 1))
-		return true;
+	if (!canChangeTable()) return true;
 
 	auto refData = GetDef();
 	if (refData != nullptr) {	// SAテーブル
@@ -331,6 +336,7 @@ unsigned char CSlotControlManager::Get2ndStyle() {
 
 // [act]制御パターン種別切り替え(1:PS, 2:SS, 3:SA, 4:Com)
 void CSlotControlManager::SetAvailCtrlPattern(unsigned char pNewFlag) {
+	if (posData.currentOrder != 0) return;
 	auto& nowMakeData = ctrlData[posData.currentFlagID];
 	const int offset = (posData.stop1st * 2);
 	// 現在の設定削除
@@ -342,6 +348,7 @@ void CSlotControlManager::SetAvailCtrlPattern(unsigned char pNewFlag) {
 
 // [act]SAテーブルタイプ決定(非停止T, 優先T)
 void CSlotControlManager::SwitchATableType() {
+	if (!canChangeTable()) return;
 	SControlAvailableDef* refData = GetDef();
 	if (refData == nullptr) return;
 	// 新規フラグ設定
@@ -352,6 +359,7 @@ void CSlotControlManager::SwitchATableType() {
 
 // [act]SAシフト切り替え(0:シフト無, 1:下1コマ, 2:上1コマ, 3:反転)
 void CSlotControlManager::SetAvailShiftConf(unsigned char pNewFlag) {
+	if (!canChangeTable()) return;
 	SControlAvailableDef* refData = GetDef();
 	if (refData == nullptr) return;
 	// 新規フラグ設定
