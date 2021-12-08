@@ -29,6 +29,7 @@ class CSlotControlManager {
 	bool ActionTableID(bool pIsUp);
 	void AdjustPos();
 	SControlDataSA* GetSA();
+	void CheckSA();
 	SControlAvailableDef* GetDef();
 	unsigned char* GetSS(bool pGet1st = false);
 	unsigned char Get2ndStyle();

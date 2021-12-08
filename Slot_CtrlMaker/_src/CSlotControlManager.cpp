@@ -221,6 +221,7 @@ bool CSlotControlManager::Action(int pNewInput) {
 		const auto styleData = Get2ndStyle();
 		if(posData.currentOrder >= 1 && styleData == 0x3) comaIndex = posData.selectReel;
 		*refData = SetAvailT(setAns, refData->availableID, posData.cursorComa[comaIndex], pNewInput, refData->tableFlag);
+		CheckSA(); // 停止不能箇所存在確認
 	} else {					// SSテーブル
 		auto refDataSS = GetSS();
 		if (refDataSS == nullptr) return false;
@@ -265,6 +266,7 @@ bool CSlotControlManager::ActionTableID(bool pIsUp) {
 	return false;
 }
 
+// [act]停止不能カ所がないか検証・ある場合はm_isSuspendをtrueにする
 SControlDataSA* CSlotControlManager::GetSA() {
 	auto& nowMakeData = ctrlData[posData.currentFlagID];
 	const auto styleData = Get2ndStyle();
@@ -285,6 +287,15 @@ SControlDataSA* CSlotControlManager::GetSA() {
 	}
 	return nullptr;
 
+}
+
+void CSlotControlManager::CheckSA() {
+	m_isSuspend = false;
+	const SControlDataSA* const sa = GetSA();
+	if (sa == nullptr) return;
+	for (int pos = 0; pos < m_comaMax; ++pos) {
+		if (GetPosFromAvailT(*sa, pos, posData.isWatchLeft) == -1) { m_isSuspend = true; break; }
+	}
 }
 
 SControlAvailableDef* CSlotControlManager::GetDef() {
@@ -354,6 +365,8 @@ void CSlotControlManager::SwitchATableType() {
 	// 新規フラグ設定
 	const auto nowFlag = refData->tableFlag & 0x04;
 	refData->tableFlag = (refData->tableFlag & 0xFB) | (~nowFlag & 0x04);
+
+	CheckSA(); // 停止不能箇所存在確認
 	UpdateActiveFlag();
 }
 
@@ -364,6 +377,8 @@ void CSlotControlManager::SetAvailShiftConf(unsigned char pNewFlag) {
 	if (refData == nullptr) return;
 	// 新規フラグ設定
 	refData->tableFlag = (refData->tableFlag & 0xfc) | (pNewFlag & 0x03);
+
+	CheckSA(); // 停止不能箇所存在確認
 	UpdateActiveFlag();
 }
 
@@ -452,7 +467,6 @@ bool CSlotControlManager::isSilp() {
 
 // [act]現在選択中フラグの停止可能位置をアップデートする
 bool CSlotControlManager::UpdateActiveFlag() {
-	m_isSuspend = false;	// m_isSuspendリセット
 	auto& nowData = ctrlData[posData.currentFlagID];
 	int orderCnt = 0;
 	for (auto ctrlIt = nowData.controlData.begin(); ctrlIt != nowData.controlData.end(); ++ctrlIt, ++orderCnt) {
@@ -474,13 +488,13 @@ bool CSlotControlManager::UpdateActiveFlag() {
 			} else if (useTable2nd == 0x2) {
 				const int ref2nd = pushPos % m_comaMax;
 				active2nd = GetActiveFromAvailT(ctrlIt->controlData2nd.controlData2ndSA[ref2nd], lrFlag);
-				// 引込不可時無効データ -> m_isSuspendをtrueにして終了
-				if (active2nd == 0) { m_isSuspend = true; return true; }
+				// 引込不可時無効データ -> activeデータクリアして終了
+				if (active2nd == 0) {
+					ctrlIt->controlData3rd.activeFlag2nd[pushPos / 2] = 0;
+					return true;
+				}
 			} else if (useTable2nd == 0x3) {
-				const int ref2nd = pushPos % m_comaMax;
-				active2nd = GetActiveFromAvailT(ctrlIt->controlData2nd.controlDataComSA[ref2nd], lrFlag);
-				// 引込不可時無効データ -> m_isSuspendをtrueにして終了
-				if (active2nd == 0) { m_isSuspend = true; return true; }
+				// 何もしない
 			} else {
 				return false;
 			}
