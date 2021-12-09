@@ -52,6 +52,8 @@ class CSlotControlManager {
 	unsigned char			SetSlipT(bool& pCHK, const size_t pSrcTableNo, const int pPushPos, const int pNewVal);
 	SControlAvailableDef	SetAvailT(bool& pCHK, const size_t pSrcTableNo, const int pPushPos, const int pNewVal, const unsigned char pTableFlag);
 
+	bool DrawComaBox(int x, int y, const unsigned int pStopPos);
+
 public:
 	bool Init(const SSlotGameDataWrapper& pData);
 	bool Process();

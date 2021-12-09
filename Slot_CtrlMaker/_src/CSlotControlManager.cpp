@@ -597,6 +597,7 @@ int CSlotControlManager::GetAvailDistance(const unsigned long long pData, const 
 
 
 bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDataManageIns, int pDrawFor) {
+	DxLib::SetDrawScreen(pDrawFor);
 	/* ÉäÅ[Éãï`âÊ */ {
 		std::vector<int> drawPos; drawPos.resize(m_reelMax * 2, -1);	// 0PS, 1PS, 2PS
 		const int reelPosByOrder[] = { Get2ndReel(posData.isWatchLeft), Get2ndReel(!posData.isWatchLeft) };
@@ -674,6 +675,7 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 		if (isSilp()) {
 			const auto ss = GetSS();
 			if (ss == nullptr) return false;
+			DrawComaBox(275, 170, tableSlip[*ss].activePos);
 			for (int i = 0; i < m_comaMax; ++i) {
 				const int posY = 176 + 26 * (m_comaMax - i - 1);
 				int stopPos = GetPosFromSlipT(*ss, i);
@@ -682,7 +684,9 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 			}
 		} else {
 			SControlDataSA* sa = GetSA();
-			if(sa == nullptr) return false;	// Ç±ÇÃä÷êîì‡Ç≈saèâä˙âª
+			if(sa == nullptr) return false;
+			const unsigned int stopFlag = m_isSuspend ? 0 : GetActiveFromAvailT(*sa, posData.isWatchLeft);
+			DrawComaBox(275, 170, stopFlag);
 			for (int i = 0; i < m_comaMax; ++i) {
 				const int posY = 176 + 26 * (m_comaMax - i - 1);
 				if (!m_isSuspend) {
@@ -700,15 +704,28 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 					const int index = j + posData.isWatchLeft ? 0 : AVAIL_ID_MAX;
 					const auto nowTableID = sa->data[index].availableID;
 					stopFlag = GetAvailShiftData(*sa, j, posData.isWatchLeft);
+					const int posY = 176;
+					DrawComaBox(posX-6, posY-6, stopFlag & 0xFFFFFFFF);
 				}
 				for (int pos = 0; pos < m_comaMax; ++pos) {
-					const int posY = 176 + 26 * (m_comaMax - pos - 1);
+					const int posY = 176 + BOX_H * (m_comaMax - pos - 1);
 					const std::string drawStr = (stopFlag & 0x1) ? "@" : "-";
 					DxLib::DrawFormatString(posX, posY, 0xFFFF00, "%s", drawStr.c_str());
 					stopFlag >>= 1;
 				}
 			}
 		}
+	}
+	return true;
+}
+
+bool CSlotControlManager::DrawComaBox(int x, int y, const unsigned int pStopPos) {
+	for (int pos = 0; pos < m_comaMax; ++pos) {
+		const int dx = x + BOX_W - BOX_A;
+		const int colorStop = ((pStopPos >> (m_comaMax - 1 - pos)) & 0x1) ? 0xFF0000 : 0x400000;
+		const int dy = y + BOX_H * pos;
+		DxLib::DrawBox(dx, dy, dx + BOX_A, dy + BOX_H, colorStop,  TRUE);
+		DxLib::DrawBox( x, dy,  x + BOX_W, dy + BOX_H,  0x808080, FALSE);
 	}
 	return true;
 }
