@@ -9,7 +9,7 @@ class CSlotControlManager {
 	static const int AVAIL_TABLE_MAX = 256;
 	static const int AVAIL_ID_MAX = 4;
 
-	static const int BOX_W = 26;
+	static const int BOX_W = 20;
 	static const int BOX_H = 26;
 	static const int BOX_A = 6;
 

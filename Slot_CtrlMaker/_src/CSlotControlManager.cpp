@@ -462,6 +462,7 @@ SControlAvailableDef CSlotControlManager::SetAvailT(bool& pCHK, const size_t pSr
 
 bool CSlotControlManager::isSilp() {
 	if (posData.currentOrder == 0) return true;
+	if (posData.currentOrder == 2) return false;
 	return !(Get2ndStyle() & 0x2);
 }
 
@@ -680,7 +681,7 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 				const int posY = 176 + 26 * (m_comaMax - i - 1);
 				int stopPos = GetPosFromSlipT(*ss, i);
 				int showVal = ((stopPos + m_comaMax) - i) % m_comaMax;
-				DxLib::DrawFormatString(281, posY, 0xFFFF00, "%d", showVal);
+				DxLib::DrawFormatString(279, posY, 0xFFFF00, "%d", showVal);
 			}
 		} else {
 			SControlDataSA* sa = GetSA();
@@ -688,24 +689,24 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 			const unsigned int stopFlag = m_isSuspend ? 0 : GetActiveFromAvailT(*sa, posData.isWatchLeft);
 			DrawComaBox(275, 170, stopFlag);
 			for (int i = 0; i < m_comaMax; ++i) {
-				const int posY = 176 + 26 * (m_comaMax - i - 1);
+				const int posY = 176 + BOX_H * (m_comaMax - i - 1);
 				if (!m_isSuspend) {
 					int stopPos = GetPosFromAvailT(*sa, i, posData.isWatchLeft);
 					int showVal = ((stopPos + m_comaMax) - i) % m_comaMax;
-					DxLib::DrawFormatString(281, posY, 0xFFFF00, "%d", showVal);
+					DxLib::DrawFormatString(279, posY, 0xFFFF00, "%d", showVal);
 				} else {
-					DxLib::DrawString(281, posY, "X", 0xFF0000);
+					DxLib::DrawString(279, posY, "X", 0xFF0000);
 				}
 			}
 			for (int j = 0; j < AVAIL_ID_MAX; ++j) {
-				const int posX = 307 + 26 * j;
+				const int posX = 298 + BOX_W * j;
 				unsigned long long stopFlag = 0;
 				/* ’âŽ~ˆÊ’uŒÄ‚Ño‚µ */ {
 					const int index = j + posData.isWatchLeft ? 0 : AVAIL_ID_MAX;
 					const auto nowTableID = sa->data[index].availableID;
 					stopFlag = GetAvailShiftData(*sa, j, posData.isWatchLeft);
 					const int posY = 176;
-					DrawComaBox(posX-6, posY-6, stopFlag & 0xFFFFFFFF);
+					DrawComaBox(posX-3, posY-6, stopFlag & 0xFFFFFFFF);
 				}
 				for (int pos = 0; pos < m_comaMax; ++pos) {
 					const int posY = 176 + BOX_H * (m_comaMax - pos - 1);
