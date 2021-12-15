@@ -703,7 +703,7 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 			DrawStopTable(xPos, yPos, posData.currentFlagID);
 			xPos += BOX_W * AVAIL_ID_MAX;
 		}
-		xPos += 5;
+		xPos += BOX_W;
 
 		// 参考資料として他テーブルを描画
 		for (int flagC = 0; flagC < m_flagMax; ++flagC) {
@@ -729,6 +729,7 @@ bool CSlotControlManager::DrawComaBox(int x, int y, const unsigned int pStopPos)
 }
 
 bool CSlotControlManager::DrawSlipTable(int x, int y, int pFlagID) {
+	const int color = (pFlagID == posData.currentFlagID) ? 0xFFFF00 : 0x808080;
 	if (isSilp()) {
 		const auto ss = GetSS(pFlagID);
 		if (ss == nullptr) return false;
@@ -737,7 +738,7 @@ bool CSlotControlManager::DrawSlipTable(int x, int y, int pFlagID) {
 			const int posY = y + 26 * (m_comaMax - i - 1);
 			int stopPos = GetPosFromSlipT(*ss, i);
 			int showVal = ((stopPos + m_comaMax) - i) % m_comaMax;
-			DxLib::DrawFormatString(x, posY, 0xFFFF00, "%d", showVal);
+			DxLib::DrawFormatString(x, posY, color, "%d", showVal);
 		}
 	} else {
 		SControlDataSA* sa = GetSA(pFlagID);
@@ -749,7 +750,7 @@ bool CSlotControlManager::DrawSlipTable(int x, int y, int pFlagID) {
 			if (!m_isSuspend) {
 				int stopPos = GetPosFromAvailT(*sa, i, posData.isWatchLeft);
 				int showVal = ((stopPos + m_comaMax) - i) % m_comaMax;
-				DxLib::DrawFormatString(x, posY, 0xFFFF00, "%d", showVal);
+				DxLib::DrawFormatString(x, posY, color, "%d", showVal);
 			} else {
 				DxLib::DrawString(x, posY, "X", 0xFF0000);
 			}
@@ -759,6 +760,7 @@ bool CSlotControlManager::DrawSlipTable(int x, int y, int pFlagID) {
 }
 
 bool CSlotControlManager::DrawStopTable(int x, int y, int pFlagID) {
+	const int color = (pFlagID == posData.currentFlagID) ? 0xFFFF00 : 0x808080;
 	SControlDataSA* sa = GetSA(pFlagID);
 	if(sa == nullptr) return false;
 	for (int j = 0; j < AVAIL_ID_MAX; ++j) {
@@ -773,7 +775,7 @@ bool CSlotControlManager::DrawStopTable(int x, int y, int pFlagID) {
 		for (int pos = 0; pos < m_comaMax; ++pos) {
 			const int posY = y + BOX_H * (m_comaMax - pos - 1);
 			const std::string drawStr = (stopFlag & 0x1) ? "@" : "-";
-			DxLib::DrawFormatString(posX, posY, 0xFFFF00, "%s", drawStr.c_str());
+			DxLib::DrawFormatString(posX, posY, color, "%s", drawStr.c_str());
 			stopFlag >>= 1;
 		}
 	}
