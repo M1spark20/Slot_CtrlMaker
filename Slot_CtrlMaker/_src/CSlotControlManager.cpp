@@ -164,46 +164,56 @@ bool CSlotControlManager::canChangeTable() {
 // [prm]pMoveOrder	: 今回変更するリールの押し順
 // [ret]正しく位置を設定できたか(無効制御有の場合false)
 bool CSlotControlManager::SetComaPos(const int pMoveOrder, const bool pIsReset, const bool pIsUp) {
-	auto& nowMakeData = ctrlData[posData.currentFlagID];
-	auto& srcData = nowMakeData.controlData[posData.stop1st];
-
 	for (int i = pIsReset ? 0 : 1; i < m_comaMax; ++i) {
 		int diffPos = pIsReset ? 0 : posData.cursorComa[pMoveOrder];
 		diffPos += pIsUp ? i : -i;
 		while (diffPos < 0)				diffPos += m_comaMax;
 		while (diffPos >= m_comaMax)	diffPos -= m_comaMax;
 
-		// 使用可能なリール位置でcontinueせず場所が確定(break)する仕組み
-		if (posData.currentOrder == 0) {
-			// 1st変更中：制御をかけない(対象が1stであるか確認する)
-			if (pMoveOrder != 0) return false;
-		} else if (posData.currentOrder == 1) {
-			// 2nd変更中：制御方式PS以外 && 参照1st であれば制御をかける
-			// ※制御方式ComSAにて3rdもこのループを参照、制御はかからない
-			if(Get2ndStyle() != 0 && pMoveOrder == 0) {
-				const auto activeData = srcData.controlData2nd.activeFlag;
-				if ((activeData & (1u << diffPos)) == 0x0) continue;
-			}
-			// 条件通過 or 2nd でifを抜ける
-		} else if (posData.currentOrder == 2) {
-			// 3rd変更中：1st,2ndは必ず制御
-			// ※制御方式ComSAはcurrentOrder == 1にて処理される
-			if (pMoveOrder == 0) {
-				// 1stに制御かけ
-				const auto activeData = srcData.controlData3rd.activeFlag1st;
-				if ((activeData & (1u << diffPos)) == 0x0) continue;
-			} else if (pMoveOrder == 1){
-				// 2ndに制御かけ
-				const auto activeData = srcData.controlData3rd.activeFlag2nd[posData.cursorComa[0]];
-				int shiftNum = diffPos + (posData.isWatchLeft ? 0 : m_comaMax);
-				if ((activeData & (1ull << shiftNum)) == 0x0) continue;
-			}
-			// 条件通過 or 3rd でifを抜ける
-		}
+		// 停止可否判定
+		if(!GetCanStop(pMoveOrder, diffPos)) continue;
 		// 場所確定
 		posData.cursorComa[pMoveOrder] = diffPos; return true;
 	}
 	return false;
+}
+
+// [act]現在の制御条件にてフラグ: pFlagIDの
+// [prm]pMoveOrder	: 今回変更するリールの押し順
+bool CSlotControlManager::GetCanStop(const int pMoveOrder, const int pLookFor, const int pFlagID) {
+	const int flagID = pFlagID < 0 ? posData.currentFlagID : pFlagID;
+	if (flagID >= m_flagMax) return false;
+	auto& nowMakeData = ctrlData[flagID];
+	auto& srcData = nowMakeData.controlData[posData.stop1st];
+
+	// 使用可能なリール位置でreturn true;(関数最下部)する仕組み
+	if (posData.currentOrder == 0) {
+		// 1st変更中：制御をかけない(対象が1stであるか確認する)
+		if (pMoveOrder != 0) return false;
+	} else if (posData.currentOrder == 1) {
+		// 2nd変更中：制御方式PS以外 && 参照1st であれば制御をかける
+		// ※制御方式ComSAにて3rdもこのループを参照、制御はかからない
+		if(Get2ndStyle() != 0 && pMoveOrder == 0) {
+			const auto activeData = srcData.controlData2nd.activeFlag;
+			if ((activeData & (1u << pLookFor)) == 0x0) return false;
+		}
+		// 条件通過 or 2nd でifを抜ける
+	} else if (posData.currentOrder == 2) {
+		// 3rd変更中：1st,2ndは必ず制御
+		// ※制御方式ComSAはcurrentOrder == 1にて処理される
+		if (pMoveOrder == 0) {
+			// 1stに制御かけ
+			const auto activeData = srcData.controlData3rd.activeFlag1st;
+			if ((activeData & (1u << pLookFor)) == 0x0) return false;;
+		} else if (pMoveOrder == 1){
+			// 2ndに制御かけ
+			const auto activeData = srcData.controlData3rd.activeFlag2nd[posData.cursorComa[0]];
+			int shiftNum = pLookFor + (posData.isWatchLeft ? 0 : m_comaMax);
+			if ((activeData & (1ull << shiftNum)) == 0x0) return false;
+		}
+		// 条件通過 or 3rd でifを抜ける
+	}
+	return true;
 }
 
 int CSlotControlManager::Get2ndReel(bool pIsLeft) {
@@ -267,8 +277,10 @@ bool CSlotControlManager::ActionTableID(bool pIsUp) {
 }
 
 // [act]停止不能カ所がないか検証・ある場合はm_isSuspendをtrueにする
-SControlDataSA* CSlotControlManager::GetSA() {
-	auto& nowMakeData = ctrlData[posData.currentFlagID];
+SControlDataSA* CSlotControlManager::GetSA(int pFlagID) {
+	const int flagID = pFlagID < 0 ? posData.currentFlagID : pFlagID;
+	if (flagID >= m_flagMax) return nullptr;
+	auto& nowMakeData = ctrlData[flagID];
 	const auto styleData = Get2ndStyle();
 	auto& nowCtrlData = nowMakeData.controlData[posData.stop1st];
 
@@ -321,8 +333,10 @@ SControlAvailableDef* CSlotControlManager::GetDef() {
 }
 
 // [act]現在参照中の該当スベリIDの入った変数ポインタを返す
-unsigned char* CSlotControlManager::GetSS(bool pGet1st) {
-	auto& nowMakeData = ctrlData[posData.currentFlagID];
+unsigned char* CSlotControlManager::GetSS(int pFlagID, bool pGet1st) {
+	const int flagID = pFlagID < 0 ? posData.currentFlagID : pFlagID;
+	if (flagID >= m_flagMax) return nullptr;
+	auto& nowMakeData = ctrlData[flagID];
 	const auto styleData = Get2ndStyle();
 	auto& nowCtrlData = nowMakeData.controlData[posData.stop1st];
 	if (posData.currentOrder == 0 || pGet1st) {		// 1st制御
@@ -673,48 +687,25 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 	}
 
 	/* テーブル描画・テーブル番号描画 */ {
-		if (isSilp()) {
-			const auto ss = GetSS();
-			if (ss == nullptr) return false;
-			DrawComaBox(275, 170, tableSlip[*ss].activePos);
-			for (int i = 0; i < m_comaMax; ++i) {
-				const int posY = 176 + 26 * (m_comaMax - i - 1);
-				int stopPos = GetPosFromSlipT(*ss, i);
-				int showVal = ((stopPos + m_comaMax) - i) % m_comaMax;
-				DxLib::DrawFormatString(279, posY, 0xFFFF00, "%d", showVal);
-			}
-		} else {
-			SControlDataSA* sa = GetSA();
-			if(sa == nullptr) return false;
-			const unsigned int stopFlag = m_isSuspend ? 0 : GetActiveFromAvailT(*sa, posData.isWatchLeft);
-			DrawComaBox(275, 170, stopFlag);
-			for (int i = 0; i < m_comaMax; ++i) {
-				const int posY = 176 + BOX_H * (m_comaMax - i - 1);
-				if (!m_isSuspend) {
-					int stopPos = GetPosFromAvailT(*sa, i, posData.isWatchLeft);
-					int showVal = ((stopPos + m_comaMax) - i) % m_comaMax;
-					DxLib::DrawFormatString(279, posY, 0xFFFF00, "%d", showVal);
-				} else {
-					DxLib::DrawString(279, posY, "X", 0xFF0000);
-				}
-			}
-			for (int j = 0; j < AVAIL_ID_MAX; ++j) {
-				const int posX = 298 + BOX_W * j;
-				unsigned long long stopFlag = 0;
-				/* 停止位置呼び出し */ {
-					const int index = j + posData.isWatchLeft ? 0 : AVAIL_ID_MAX;
-					const auto nowTableID = sa->data[index].availableID;
-					stopFlag = GetAvailShiftData(*sa, j, posData.isWatchLeft);
-					const int posY = 176;
-					DrawComaBox(posX-3, posY-6, stopFlag & 0xFFFFFFFF);
-				}
-				for (int pos = 0; pos < m_comaMax; ++pos) {
-					const int posY = 176 + BOX_H * (m_comaMax - pos - 1);
-					const std::string drawStr = (stopFlag & 0x1) ? "@" : "-";
-					DxLib::DrawFormatString(posX, posY, 0xFFFF00, "%s", drawStr.c_str());
-					stopFlag >>= 1;
-				}
-			}
+		// x=275, 298 y = 176
+		int xPos = 275;
+		const int yPos = 176;
+		DrawSlipTable(xPos, yPos, posData.currentFlagID);
+		xPos += BOX_W;
+
+		if (!isSilp()) {
+			DrawStopTable(xPos, yPos, posData.currentFlagID);
+			xPos += BOX_W * AVAIL_ID_MAX;
+		}
+		xPos += 5;
+
+		// 参考資料として他テーブルを描画
+		for (int flagC = 0; flagC < m_flagMax; ++flagC) {
+			if (flagC == posData.currentFlagID) continue;
+			if (!GetCanStop(posData.selectReel, posData.cursorComa[posData.selectReel], flagC)) continue;
+
+			DrawSlipTable(xPos, yPos, flagC);
+			xPos += BOX_W;
 		}
 	}
 	return true;
@@ -727,6 +718,58 @@ bool CSlotControlManager::DrawComaBox(int x, int y, const unsigned int pStopPos)
 		const int dy = y + BOX_H * pos;
 		DxLib::DrawBox(dx, dy, dx + BOX_A, dy + BOX_H, colorStop,  TRUE);
 		DxLib::DrawBox( x, dy,  x + BOX_W, dy + BOX_H,  0x808080, FALSE);
+	}
+	return true;
+}
+
+bool CSlotControlManager::DrawSlipTable(int x, int y, int pFlagID) {
+	if (isSilp()) {
+		const auto ss = GetSS(pFlagID);
+		if (ss == nullptr) return false;
+		DrawComaBox(x-3, y-6, tableSlip[*ss].activePos);
+		for (int i = 0; i < m_comaMax; ++i) {
+			const int posY = y + 26 * (m_comaMax - i - 1);
+			int stopPos = GetPosFromSlipT(*ss, i);
+			int showVal = ((stopPos + m_comaMax) - i) % m_comaMax;
+			DxLib::DrawFormatString(x, posY, 0xFFFF00, "%d", showVal);
+		}
+	} else {
+		SControlDataSA* sa = GetSA(pFlagID);
+		if(sa == nullptr) return false;
+		const unsigned int stopFlag = m_isSuspend ? 0 : GetActiveFromAvailT(*sa, posData.isWatchLeft);
+		DrawComaBox(x-3, y-6, stopFlag);
+		for (int i = 0; i < m_comaMax; ++i) {
+			const int posY = y + BOX_H * (m_comaMax - i - 1);
+			if (!m_isSuspend) {
+				int stopPos = GetPosFromAvailT(*sa, i, posData.isWatchLeft);
+				int showVal = ((stopPos + m_comaMax) - i) % m_comaMax;
+				DxLib::DrawFormatString(x, posY, 0xFFFF00, "%d", showVal);
+			} else {
+				DxLib::DrawString(x, posY, "X", 0xFF0000);
+			}
+		}
+	}
+	return true;
+}
+
+bool CSlotControlManager::DrawStopTable(int x, int y, int pFlagID) {
+	SControlDataSA* sa = GetSA(pFlagID);
+	if(sa == nullptr) return false;
+	for (int j = 0; j < AVAIL_ID_MAX; ++j) {
+		const int posX = x + BOX_W * j;
+		unsigned long long stopFlag = 0;
+		/* 停止位置呼び出し */ {
+			const int index = j + posData.isWatchLeft ? 0 : AVAIL_ID_MAX;
+			const auto nowTableID = sa->data[index].availableID;
+			stopFlag = GetAvailShiftData(*sa, j, posData.isWatchLeft);
+			DrawComaBox(posX-3, y-6, stopFlag & 0xFFFFFFFF);
+		}
+		for (int pos = 0; pos < m_comaMax; ++pos) {
+			const int posY = y + BOX_H * (m_comaMax - pos - 1);
+			const std::string drawStr = (stopFlag & 0x1) ? "@" : "-";
+			DxLib::DrawFormatString(posX, posY, 0xFFFF00, "%s", drawStr.c_str());
+			stopFlag >>= 1;
+		}
 	}
 	return true;
 }
