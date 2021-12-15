@@ -150,6 +150,9 @@ void CSlotControlManager::AdjustPos() {
 	if (isSilp()) posData.selectAvailID = 0;
 	while (posData.selectAvailID < 0) posData.selectAvailID += AVAIL_ID_MAX;
 	while (posData.selectAvailID >= AVAIL_ID_MAX) posData.selectAvailID -= AVAIL_ID_MAX;
+
+	// ˆÊ’u©“®’²®
+	SetComaPos(posData.selectReel, true, true);
 }
 
 bool CSlotControlManager::canChangeTable() {
@@ -165,7 +168,7 @@ bool CSlotControlManager::canChangeTable() {
 // [ret]³‚µ‚­ˆÊ’u‚ğİ’è‚Å‚«‚½‚©(–³Œø§Œä—L‚Ìê‡false)
 bool CSlotControlManager::SetComaPos(const int pMoveOrder, const bool pIsReset, const bool pIsUp) {
 	for (int i = pIsReset ? 0 : 1; i < m_comaMax; ++i) {
-		int diffPos = pIsReset ? 0 : posData.cursorComa[pMoveOrder];
+		int diffPos = posData.cursorComa[pMoveOrder];
 		diffPos += pIsUp ? i : -i;
 		while (diffPos < 0)				diffPos += m_comaMax;
 		while (diffPos >= m_comaMax)	diffPos -= m_comaMax;
