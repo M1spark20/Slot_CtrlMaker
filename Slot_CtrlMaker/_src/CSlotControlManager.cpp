@@ -668,12 +668,17 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 		// リール描画
 		for (size_t i = 0; i < drawPos.size(); i+=2) {
 			if (drawPos[i] < 0) continue;
+			const int posOffset = drawReel.comaW / 2 - 8;
+			const int posY = drawReel.y + drawReel.comaH * drawReel.comaNum + 1;
 			drawReel.x = 502 + 78 * (i/2); drawReel.reelID = i/2;
 			int castPos = (m_comaMax * 2 - 3 - drawPos[i]) % m_comaMax;
 			pData.reelManager.DrawReel(pDataManageIns, drawReel, castPos, pDrawFor);
+			DxLib::DrawFormatString(drawReel.x + posOffset, posY, 0xFFFF00, "%02d", drawPos[i] + 1);
+
 			drawReel.x = 768 + 78 * (i/2);
 			castPos = (m_comaMax * 2 - 3 - drawPos[i + 1]) % m_comaMax;
 			pData.reelManager.DrawReel(pDataManageIns, drawReel, castPos, pDrawFor);
+			DxLib::DrawFormatString(drawReel.x + posOffset, posY, 0xFFFF00, "%02d", drawPos[i+1] + 1);
 		}
 	}
 
@@ -684,9 +689,7 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 		DxLib::DrawFormatString(277, 60, 0xFFFF00, "stop1st       : %d", posData.stop1st);
 		const std::string ctrlType[] = {"PushS", "StopS", "2ndSA", "ComSA"};
 		DxLib::DrawFormatString(277, 80, 0xFFFF00, "ctrlType      : %s", ctrlType[Get2ndStyle()].c_str());
-		DxLib::DrawFormatString(277,100, 0xFFFF00, "currentComa   : %d, %d, %d", 
-			posData.cursorComa[0], posData.cursorComa[1], posData.cursorComa[2]);
-		DxLib::DrawFormatString(277,120, 0xFFFF00, "selectAvailID : %d", posData.selectAvailID);
+		DxLib::DrawFormatString(277,100, 0xFFFF00, "selectAvailID : %d", posData.selectAvailID);
 	}
 
 	/* テーブル描画・テーブル番号描画 */ {
