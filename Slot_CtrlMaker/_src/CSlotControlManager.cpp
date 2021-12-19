@@ -694,9 +694,16 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 
 	/* テーブル描画・テーブル番号描画 */ {
 		// x=275, 298 y = 176
-		int xPos = 275;
+		int xPos = 255;
 		const int yPos = 176;
-		DrawSlipTable(xPos, yPos, posData.currentFlagID);
+		// リール番号描画
+		for (int i = 0; i < m_comaMax; ++i) {
+			const int strY = yPos + i * BOX_H;
+			DxLib::DrawFormatString(xPos-2, strY, 0x808080, "%02d", m_comaMax - i);
+		}
+		xPos += BOX_W;
+		
+		DrawSlipTable(xPos, yPos, posData.currentFlagID, pData);
 		xPos += BOX_W;
 
 		if (!isSilp()) {
@@ -710,7 +717,7 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 			if (flagC == posData.currentFlagID) continue;
 			if (!GetCanStop(posData.selectReel, posData.cursorComa[posData.selectReel], flagC)) continue;
 
-			DrawSlipTable(xPos, yPos, flagC);
+			DrawSlipTable(xPos, yPos, flagC, pData);
 			xPos += BOX_W;
 		}
 	}
@@ -728,8 +735,13 @@ bool CSlotControlManager::DrawComaBox(int x, int y, const unsigned int pStopPos)
 	return true;
 }
 
-bool CSlotControlManager::DrawSlipTable(int x, int y, int pFlagID) {
+bool CSlotControlManager::DrawSlipTable(int x, int y, int pFlagID, SSlotGameDataWrapper& pData) {
 	const int color = (pFlagID == posData.currentFlagID) ? 0xFFFF00 : 0x808080;
+	const std::string flagName  = pData.randManager.GetFlagName (pFlagID);
+	const std::string bonusName = pData.randManager.GetBonusName(pFlagID);
+
+	DxLib::DrawString(x - 1, y - BOX_H*2 + 14, flagName .c_str(), 0xFFFF00);
+	DxLib::DrawString(x - 1, y - BOX_H   +  4, bonusName.c_str(), 0xFFFF00);
 	if (isSilp()) {
 		const auto ss = GetSS(pFlagID);
 		if (ss == nullptr) return false;
