@@ -1,5 +1,6 @@
 #include "_header/CSlotControlManager.hpp"
 #include "_header/SSlotGameDataWrapper.hpp"
+#include "_header/CRestoreManager.hpp"
 #include "_header/keyexport.h"
 #include <DxLib.h>
 
@@ -10,6 +11,7 @@ bool CSlotControlManager::Init(const SSlotGameDataWrapper& pData) {
 	m_comaMax = pData.reelManager.GetCharaNum();
 	m_allStopFlag = (unsigned long long)pow(2, pData.reelManager.GetCharaNum()) - 1ull;
 	m_isSuspend = false;
+	m_refreshFlag = false;
 
 	/* slipT初期化 */ {
 		const unsigned long long allStopFlag = m_allStopFlag;
@@ -66,6 +68,7 @@ bool CSlotControlManager::Init(const SSlotGameDataWrapper& pData) {
 }
 
 bool CSlotControlManager::Process() {
+	m_refreshFlag = false;
 	/* 画面操作 */ {
 		CKeyExport_S& key = CKeyExport_S::GetInstance();
 		const bool shiftFlag = key.ExportKeyStateFrame(KEY_INPUT_LSHIFT) >= 1 || key.ExportKeyStateFrame(KEY_INPUT_RSHIFT) >= 1;
@@ -227,6 +230,7 @@ int CSlotControlManager::Get2ndReel(bool pIsLeft) {
 bool CSlotControlManager::Action(int pNewInput) {
 	bool setAns = true;
 	if (!canChangeTable()) return true;
+	m_refreshFlag = true;
 
 	auto refData = GetDef();
 	if (refData != nullptr) {	// SAテーブル
@@ -372,6 +376,7 @@ void CSlotControlManager::SetAvailCtrlPattern(unsigned char pNewFlag) {
 	// 新規設定導入
 	nowMakeData.controlStyle |= ((pNewFlag & 0x03) << offset);
 	UpdateActiveFlag();
+	m_refreshFlag = true;
 }
 
 // [act]SAテーブルタイプ決定(非停止T, 優先T)
@@ -385,6 +390,7 @@ void CSlotControlManager::SwitchATableType() {
 
 	CheckSA(); // 停止不能箇所存在確認
 	UpdateActiveFlag();
+	m_refreshFlag = true;
 }
 
 // [act]SAシフト切り替え(0:シフト無, 1:下1コマ, 2:上1コマ, 3:反転)
@@ -397,6 +403,7 @@ void CSlotControlManager::SetAvailShiftConf(unsigned char pNewFlag) {
 
 	CheckSA(); // 停止不能箇所存在確認
 	UpdateActiveFlag();
+	m_refreshFlag = true;
 }
 
 // [act]スベリT更新、テーブルNoの付与・採番まで行う
@@ -792,4 +799,232 @@ bool CSlotControlManager::DrawStopTable(int x, int y, int pFlagID) {
 		}
 	}
 	return true;
+}
+
+
+bool CSlotControlManager::ReadRestore(CRestoreManagerRead& pReader) {
+	size_t sizeTemp = 0;
+	size_t loopCnt = 0;
+
+	// tableSlip
+	if (!pReader.ReadNum(sizeTemp)) return false;
+	loopCnt = sizeTemp < tableSlip.size() ? sizeTemp : tableSlip.size();
+	for (size_t i = 0; i < loopCnt; ++i) {
+		if (!pReader.ReadNum(tableSlip[i].data     )) return false;
+		if (!pReader.ReadNum(tableSlip[i].activePos)) return false;
+		if (!pReader.ReadNum(tableSlip[i].refNum   )) return false;
+	}
+	
+	// tableAvailable(activePosは使用しない)
+	if (!pReader.ReadNum(sizeTemp)) return false;
+	loopCnt = sizeTemp < tableAvailable.size() ? sizeTemp : tableAvailable.size();
+	for (size_t i = 0; i < loopCnt; ++i) {
+		if (!pReader.ReadNum(tableAvailable[i].data     )) return false;
+		if (!pReader.ReadNum(tableAvailable[i].refNum   )) return false;
+	}
+
+	// ctrlData
+	if (!pReader.ReadNum(sizeTemp)) return false;
+	loopCnt = sizeTemp < ctrlData.size() ? sizeTemp : ctrlData.size();
+	for (size_t i = 0; i < loopCnt; ++i) {
+		if (!pReader.ReadNum(ctrlData[i].dataID      )) return false;
+		if (!pReader.ReadNum(ctrlData[i].controlStyle)) return false;
+
+		if (!pReader.ReadNum(sizeTemp)) return false;
+		const size_t dataCount = sizeTemp < ctrlData[i].controlData.size() ? sizeTemp : ctrlData[i].controlData.size();
+		for (size_t dataC = 0; dataC < dataCount; ++dataC) {
+			size_t elemSize = 0;
+			auto& nowData = ctrlData[i].controlData[dataC];
+			if (!pReader.ReadNum(nowData.controlData1st)) return false;
+			if (!pReader.ReadNum(nowData.controlData2nd.activeFlag)) return false;
+
+			// PS
+			if (!pReader.ReadNum(sizeTemp)) return false;
+			elemSize = sizeTemp < nowData.controlData2nd.controlData2ndPS.size() ?
+				sizeTemp : nowData.controlData2nd.controlData2ndPS.size();
+			for (size_t j = 0; j < elemSize; ++j) {
+				auto& ps = nowData.controlData2nd.controlData2ndPS[j];
+				if (!pReader.ReadNum(ps)) return false;
+			}
+
+			// SS
+			if (!pReader.ReadNum(sizeTemp)) return false;
+			elemSize = sizeTemp < nowData.controlData2nd.controlData2ndSS.size() ?
+				sizeTemp : nowData.controlData2nd.controlData2ndSS.size();
+			for (size_t j = 0; j < elemSize; ++j) {
+				auto& ss = nowData.controlData2nd.controlData2ndSS[j];
+				if (!pReader.ReadNum(ss)) return false;
+			}
+
+			// 2ndSA
+			if (!pReader.ReadNum(sizeTemp)) return false;
+			elemSize = sizeTemp < nowData.controlData2nd.controlData2ndSA.size() ?
+				sizeTemp : nowData.controlData2nd.controlData2ndSA.size();
+			for (size_t j = 0; j < elemSize; ++j) {
+				auto& sa = nowData.controlData2nd.controlData2ndSA[j];
+				if (!pReader.ReadNum(sizeTemp)) return false;
+				const size_t cntMax = sizeTemp < sa.data.size() ? sizeTemp : sa.data.size();
+				for (size_t k = 0; k < cntMax; ++k) {
+					if (!pReader.ReadNum(sa.data[k].tableFlag  )) return false;
+					if (!pReader.ReadNum(sa.data[k].availableID)) return false;
+				}
+			}
+
+			// ComSA
+			if (!pReader.ReadNum(sizeTemp)) return false;
+			elemSize = sizeTemp < nowData.controlData2nd.controlDataComSA.size() ?
+				sizeTemp : nowData.controlData2nd.controlDataComSA.size();
+			for (size_t j = 0; j < elemSize; ++j) {
+				auto& sa = nowData.controlData2nd.controlDataComSA[j];
+				if (!pReader.ReadNum(sizeTemp)) return false;
+				const size_t cntMax = sizeTemp < sa.data.size() ? sizeTemp : sa.data.size();
+				for (size_t k = 0; k < cntMax; ++k) {
+					if (!pReader.ReadNum(sa.data[k].tableFlag  )) return false;
+					if (!pReader.ReadNum(sa.data[k].availableID)) return false;
+				}
+			}
+
+			// 3rd
+			if (!pReader.ReadNum(nowData.controlData3rd.activeFlag1st)) return false;
+			if (!pReader.ReadNum(sizeTemp)) return false;
+			elemSize = sizeTemp < nowData.controlData3rd.activeFlag2nd.size() ?
+				sizeTemp : nowData.controlData3rd.activeFlag2nd.size();
+			for (size_t j = 0; j < elemSize; ++j) {
+				if (!pReader.ReadNum(nowData.controlData3rd.activeFlag2nd[j])) return false;
+			}
+
+			if (!pReader.ReadNum(sizeTemp)) return false;
+			elemSize = sizeTemp < nowData.controlData3rd.availableData.size() ?
+				sizeTemp : nowData.controlData3rd.availableData.size();
+			for (size_t j = 0; j < nowData.controlData3rd.availableData.size(); ++j) {
+				const auto& sa = nowData.controlData3rd.availableData[j];
+				if (!pReader.ReadNum(sizeTemp)) return false;
+				const size_t cntMax = sizeTemp < sa.data.size() ? sizeTemp : sa.data.size();
+				for (size_t k = 0; k < cntMax; ++k) {
+					if (!pReader.ReadNum(sa.data[k].tableFlag)) return false;
+					if (!pReader.ReadNum(sa.data[k].availableID)) return false;
+				}
+			}
+		}
+	}
+
+	// posData
+	if (!pReader.ReadNum(posData.currentFlagID)) return false;
+	if (!pReader.ReadNum(posData.selectReel)) return false;
+	if (!pReader.ReadNum(posData.currentOrder)) return false;
+	if (!pReader.ReadNum(posData.stop1st)) return false;
+	if (!pReader.ReadNum(posData.selectAvailID)) return false;
+	if (!pReader.ReadNum(posData.isWatchLeft)) return false;
+
+	if (!pReader.ReadNum(sizeTemp)) return false;
+	loopCnt = sizeTemp < posData.cursorComa.size() ? sizeTemp : posData.cursorComa.size();
+
+	for (size_t i = 0; i < loopCnt; ++i) {
+		if (!pReader.ReadNum(posData.cursorComa[i])) return false;
+	}
+
+	AdjustPos();
+	return true;
+}
+
+bool CSlotControlManager::WriteRestore(CRestoreManagerWrite& pWriter) const {
+	// tableSlip
+	if (!pWriter.WriteNum(tableSlip.size())) return false;
+	for (size_t i = 0; i < tableSlip.size(); ++i) {
+		if (!pWriter.WriteNum(tableSlip[i].data     )) return false;
+		if (!pWriter.WriteNum(tableSlip[i].activePos)) return false;
+		if (!pWriter.WriteNum(tableSlip[i].refNum   )) return false;
+	}
+
+	// tableAvailable(activePosは使用しない)
+	if (!pWriter.WriteNum(tableAvailable.size())) return false;
+	for (size_t i = 0; i < tableAvailable.size(); ++i) {
+		if (!pWriter.WriteNum(tableAvailable[i].data  )) return false;
+		if (!pWriter.WriteNum(tableAvailable[i].refNum)) return false;
+	}
+
+	// ctrlData
+	if (!pWriter.WriteNum(ctrlData.size())) return false;
+	for (size_t i = 0; i < ctrlData.size(); ++i) {
+		if (!pWriter.WriteNum(ctrlData[i].dataID      )) return false;
+		if (!pWriter.WriteNum(ctrlData[i].controlStyle)) return false;
+
+		if (!pWriter.WriteNum(ctrlData[i].controlData.size())) return false;
+		for (size_t dataC = 0; dataC < ctrlData[i].controlData.size(); ++dataC) {
+			const auto& nowData = ctrlData[i].controlData[dataC];
+			if (!pWriter.WriteNum(nowData.controlData1st)) return false;
+			if (!pWriter.WriteNum(nowData.controlData2nd.activeFlag)) return false;
+
+			// PS
+			if (!pWriter.WriteNum(nowData.controlData2nd.controlData2ndPS.size())) return false;
+			for (size_t j = 0; j < nowData.controlData2nd.controlData2ndPS.size(); ++j) {
+				const auto& ps = nowData.controlData2nd.controlData2ndPS[j];
+				if (!pWriter.WriteNum(ps)) return false;
+			}
+
+			// SS
+			if (!pWriter.WriteNum(nowData.controlData2nd.controlData2ndSS.size())) return false;
+			for (size_t j = 0; j < nowData.controlData2nd.controlData2ndSS.size(); ++j) {
+				const auto& ss = nowData.controlData2nd.controlData2ndSS[j];
+				if (!pWriter.WriteNum(ss)) return false;
+			}
+
+			// 2ndSA
+			if (!pWriter.WriteNum(nowData.controlData2nd.controlData2ndSA.size())) return false;
+			for (size_t j = 0; j < nowData.controlData2nd.controlData2ndSA.size(); ++j) {
+				const auto& sa = nowData.controlData2nd.controlData2ndSA[j];
+				if (!pWriter.WriteNum(sa.data.size())) return false;
+				for (size_t k = 0; k < sa.data.size(); ++k) {
+					if (!pWriter.WriteNum(sa.data[k].tableFlag  )) return false;
+					if (!pWriter.WriteNum(sa.data[k].availableID)) return false;
+				}
+			}
+
+			// ComSA
+			if (!pWriter.WriteNum(nowData.controlData2nd.controlDataComSA.size())) return false;
+			for (size_t j = 0; j < nowData.controlData2nd.controlDataComSA.size(); ++j) {
+				const auto& sa = nowData.controlData2nd.controlDataComSA[j];
+				if (!pWriter.WriteNum(sa.data.size())) return false;
+				for (size_t k = 0; k < sa.data.size(); ++k) {
+					if (!pWriter.WriteNum(sa.data[k].tableFlag  )) return false;
+					if (!pWriter.WriteNum(sa.data[k].availableID)) return false;
+				}
+			}
+
+			// 3rd
+			if (!pWriter.WriteNum(nowData.controlData3rd.activeFlag1st)) return false;
+			if (!pWriter.WriteNum(nowData.controlData3rd.activeFlag2nd.size())) return false;
+			for (size_t j = 0; j < nowData.controlData3rd.activeFlag2nd.size(); ++j) {
+				if (!pWriter.WriteNum(nowData.controlData3rd.activeFlag2nd[j])) return false;
+			}
+			if (!pWriter.WriteNum(nowData.controlData3rd.availableData.size())) return false;
+			for (size_t j = 0; j < nowData.controlData3rd.availableData.size(); ++j) {
+				const auto& sa = nowData.controlData3rd.availableData[j];
+				if (!pWriter.WriteNum(sa.data.size())) return false;
+				for (size_t k = 0; k < sa.data.size(); ++k) {
+					if (!pWriter.WriteNum(sa.data[k].tableFlag  )) return false;
+					if (!pWriter.WriteNum(sa.data[k].availableID)) return false;
+				}
+			}
+		}
+	}
+
+	// posData
+	if (!pWriter.WriteNum(posData.currentFlagID)) return false;
+	if (!pWriter.WriteNum(posData.selectReel   )) return false;
+	if (!pWriter.WriteNum(posData.currentOrder )) return false;
+	if (!pWriter.WriteNum(posData.stop1st      )) return false;
+	if (!pWriter.WriteNum(posData.selectAvailID)) return false;
+	if (!pWriter.WriteNum(posData.isWatchLeft  )) return false;
+
+	if (!pWriter.WriteNum(posData.cursorComa.size())) return false;
+	for (size_t i = 0; i < posData.cursorComa.size(); ++i) {
+		if (!pWriter.WriteNum(posData.cursorComa[i])) return false;
+	}
+
+	return true;
+}
+
+bool CSlotControlManager::RefreshFlag() const {
+	return m_refreshFlag && !m_isSuspend;
 }

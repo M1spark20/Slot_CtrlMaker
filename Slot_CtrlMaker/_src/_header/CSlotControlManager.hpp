@@ -3,6 +3,8 @@
 #include "SControlPositionData.hpp"
 struct SSlotGameDataWrapper;
 class CGameDataManage;
+class CRestoreManagerRead;
+class CRestoreManagerWrite;
 
 class CSlotControlManager {
 	static const int SLIP_TABLE_MAX  = 256;
@@ -18,6 +20,7 @@ class CSlotControlManager {
 	int m_comaMax;
 	unsigned long long m_allStopFlag;
 	bool m_isSuspend;					// SAで無効データがある場合trueにして編集対象をロックする
+	bool m_refreshFlag;
 
 	std::vector<SControlMakeData>	ctrlData;
 	std::vector<SControlTable>		tableSlip;
@@ -61,4 +64,8 @@ public:
 	bool Init(const SSlotGameDataWrapper& pData);
 	bool Process();
 	bool Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDataManageIns, int pDrawFor);
+
+	bool RefreshFlag() const;
+	bool ReadRestore(CRestoreManagerRead& pReader);
+	bool WriteRestore(CRestoreManagerWrite& pWriter) const;
 };

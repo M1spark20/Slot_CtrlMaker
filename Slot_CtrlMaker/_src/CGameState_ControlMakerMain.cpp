@@ -16,9 +16,13 @@ bool CGameState_ControlMakerMain::Init(CGameDataManage& pDataManageIns) {
 	if (!m_data.timeManager.Init(m_data.reelManager.GetReelNum()))					return false;
 
 	// controlManagerをデータ有で再初期化
-	m_controlManager.Init(m_data);
-
 	if (!m_controlManager.Init(m_data))	return false;
+
+	// 保存データ読み込み
+	CRestoreManagerRead reader;
+	if (reader.StartRead()) {
+		if (!m_controlManager.ReadRestore(reader)) return false;
+	}
 
 	// 縮小用画面生成
 	DxLib::GetScreenState(&mDisplayW, &mDisplayH, NULL);
@@ -66,16 +70,14 @@ EChangeStateFlag CGameState_ControlMakerMain::Process(CGameDataManage& pDataMana
 	m_data.reelManager.Process(m_data.timeManager);
 
 	// データ保存
-	/*if (m_data.restoreManager.IsActivate()) {
-		if (!m_data.restoreManager.StartWrite()) return eStateErrEnd;
-		if (!m_data.internalDataManager.WriteRestore(m_data.restoreManager)) return eStateErrEnd;
-		if (!m_data.dataCounter.WriteRestore(m_data.restoreManager)) return eStateErrEnd;
-		if (!m_data.reelManager.WriteRestore(m_data.restoreManager)) return eStateErrEnd;
-		if (!m_data.timeManager.WriteRestore(m_data.restoreManager)) return eStateErrEnd;
-		if (!m_data.effectManager.WriteRestore(m_data.restoreManager)) return eStateErrEnd;
-		if (!m_data.reachCollection.WriteRestore(m_data.restoreManager)) return eStateErrEnd;
-		if (!m_data.restoreManager.Flush()) return eStateErrEnd;
-	}*/
+	if (m_controlManager.RefreshFlag()) {
+		m_data.restoreManager.SetActivate();	// 自分で有効化してチェックする
+		if (!m_data.restoreManager.IsActivate()) {
+			if (!m_data.restoreManager.StartWrite()) return EChangeStateFlag::eStateErrEnd;
+			if (!m_controlManager.WriteRestore(m_data.restoreManager)) return EChangeStateFlag::eStateErrEnd;
+			if (!m_data.restoreManager.Flush()) return EChangeStateFlag::eStateErrEnd;
+		}
+	}
 
 	return EChangeStateFlag::eStateContinue;
 }
