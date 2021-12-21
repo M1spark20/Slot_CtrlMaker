@@ -804,109 +804,134 @@ bool CSlotControlManager::DrawStopTable(int x, int y, int pFlagID) {
 
 bool CSlotControlManager::ReadRestore(CRestoreManagerRead& pReader) {
 	size_t sizeTemp = 0;
-	size_t loopCnt = 0;
+	size_t defSize[4] = { 0,0,0,0 };
+	size_t loopMax[4] = { 0,0,0,0 };
 
 	// tableSlip
-	if (!pReader.ReadNum(sizeTemp)) return false;
-	loopCnt = sizeTemp < tableSlip.size() ? sizeTemp : tableSlip.size();
-	for (size_t i = 0; i < loopCnt; ++i) {
+	if (!pReader.ReadNum(sizeTemp)) return false; loopMax[0] = sizeTemp;
+	if (sizeTemp > tableSlip.size()) { defSize[0] = tableSlip.size(); tableSlip.resize(sizeTemp, tableSlip[0]); }
+	for (size_t i = 0; i < loopMax[0]; ++i) {
 		if (!pReader.ReadNum(tableSlip[i].data     )) return false;
 		if (!pReader.ReadNum(tableSlip[i].activePos)) return false;
 		if (!pReader.ReadNum(tableSlip[i].refNum   )) return false;
 	}
+	if (defSize[0] > 0) { tableSlip.resize(defSize[0]); defSize[0] = 0; }
 	
 	// tableAvailable(activePos‚ÍŽg—p‚µ‚È‚¢)
-	if (!pReader.ReadNum(sizeTemp)) return false;
-	loopCnt = sizeTemp < tableAvailable.size() ? sizeTemp : tableAvailable.size();
-	for (size_t i = 0; i < loopCnt; ++i) {
+	if (!pReader.ReadNum(sizeTemp)) return false; loopMax[0] = sizeTemp;
+	if (sizeTemp > tableAvailable.size()) { defSize[0] = tableAvailable.size(); tableAvailable.resize(sizeTemp, tableAvailable[0]); }
+	for (size_t i = 0; i < loopMax[0]; ++i) {
 		if (!pReader.ReadNum(tableAvailable[i].data     )) return false;
 		if (!pReader.ReadNum(tableAvailable[i].refNum   )) return false;
 	}
+	if (defSize[0] > 0) { tableAvailable.resize(defSize[0]); defSize[0] = 0; }
 
 	// ctrlData
-	if (!pReader.ReadNum(sizeTemp)) return false;
-	loopCnt = sizeTemp < ctrlData.size() ? sizeTemp : ctrlData.size();
-	for (size_t i = 0; i < loopCnt; ++i) {
+	if (!pReader.ReadNum(sizeTemp)) return false; loopMax[0] = sizeTemp;
+	if (sizeTemp > ctrlData.size()) { defSize[0] = ctrlData.size(); ctrlData.resize(sizeTemp, ctrlData[0]); }
+	for (size_t i = 0; i < loopMax[0]; ++i) {
 		if (!pReader.ReadNum(ctrlData[i].dataID      )) return false;
 		if (!pReader.ReadNum(ctrlData[i].controlStyle)) return false;
 
-		if (!pReader.ReadNum(sizeTemp)) return false;
-		const size_t dataCount = sizeTemp < ctrlData[i].controlData.size() ? sizeTemp : ctrlData[i].controlData.size();
-		for (size_t dataC = 0; dataC < dataCount; ++dataC) {
-			size_t elemSize = 0;
+		if (!pReader.ReadNum(sizeTemp)) return false; loopMax[1] = sizeTemp;
+		if (sizeTemp > ctrlData[i].controlData.size()) { defSize[1] = ctrlData[i].controlData.size(); ctrlData[i].controlData.resize(sizeTemp, ctrlData[i].controlData[0]); }
+		for (size_t dataC = 0; dataC < loopMax[1]; ++dataC) {
 			auto& nowData = ctrlData[i].controlData[dataC];
 			if (!pReader.ReadNum(nowData.controlData1st)) return false;
 			if (!pReader.ReadNum(nowData.controlData2nd.activeFlag)) return false;
 
 			// PS
-			if (!pReader.ReadNum(sizeTemp)) return false;
-			elemSize = sizeTemp < nowData.controlData2nd.controlData2ndPS.size() ?
-				sizeTemp : nowData.controlData2nd.controlData2ndPS.size();
-			for (size_t j = 0; j < elemSize; ++j) {
+			if (!pReader.ReadNum(sizeTemp)) return false; loopMax[2] = sizeTemp;
+			if (sizeTemp > nowData.controlData2nd.controlData2ndPS.size()) {
+				defSize[2] = nowData.controlData2nd.controlData2ndPS.size();
+				nowData.controlData2nd.controlData2ndPS.resize(sizeTemp, nowData.controlData2nd.controlData2ndPS[0]);
+			}
+			for (size_t j = 0; j < loopMax[2]; ++j) {
 				auto& ps = nowData.controlData2nd.controlData2ndPS[j];
 				if (!pReader.ReadNum(ps)) return false;
 			}
+			if (defSize[2] > 0) { nowData.controlData2nd.controlData2ndPS.resize(defSize[2]); defSize[2] = 0; }
 
 			// SS
-			if (!pReader.ReadNum(sizeTemp)) return false;
-			elemSize = sizeTemp < nowData.controlData2nd.controlData2ndSS.size() ?
-				sizeTemp : nowData.controlData2nd.controlData2ndSS.size();
-			for (size_t j = 0; j < elemSize; ++j) {
+			if (!pReader.ReadNum(sizeTemp)) return false; loopMax[2] = sizeTemp;
+			if (sizeTemp > nowData.controlData2nd.controlData2ndSS.size()) {
+				defSize[2] = nowData.controlData2nd.controlData2ndSS.size();
+				nowData.controlData2nd.controlData2ndSS.resize(sizeTemp, nowData.controlData2nd.controlData2ndSS[0]);
+			}
+			for (size_t j = 0; j < loopMax[2]; ++j) {
 				auto& ss = nowData.controlData2nd.controlData2ndSS[j];
 				if (!pReader.ReadNum(ss)) return false;
 			}
+			if (defSize[2] > 0) { nowData.controlData2nd.controlData2ndSS.resize(defSize[2]); defSize[2] = 0; }
 
 			// 2ndSA
-			if (!pReader.ReadNum(sizeTemp)) return false;
-			elemSize = sizeTemp < nowData.controlData2nd.controlData2ndSA.size() ?
-				sizeTemp : nowData.controlData2nd.controlData2ndSA.size();
-			for (size_t j = 0; j < elemSize; ++j) {
+			if (!pReader.ReadNum(sizeTemp)) return false; loopMax[2] = sizeTemp;
+			if (sizeTemp > nowData.controlData2nd.controlData2ndSA.size()) {
+				defSize[2] = nowData.controlData2nd.controlData2ndSA.size();
+				nowData.controlData2nd.controlData2ndSA.resize(sizeTemp, nowData.controlData2nd.controlData2ndSA[0]);
+			}
+			for (size_t j = 0; j < loopMax[2]; ++j) {
 				auto& sa = nowData.controlData2nd.controlData2ndSA[j];
-				if (!pReader.ReadNum(sizeTemp)) return false;
-				const size_t cntMax = sizeTemp < sa.data.size() ? sizeTemp : sa.data.size();
-				for (size_t k = 0; k < cntMax; ++k) {
+				if (!pReader.ReadNum(sizeTemp)) return false; loopMax[3] = sizeTemp;
+				if (sizeTemp > sa.data.size()) { defSize[3] = sa.data.size(); sa.data.resize(sizeTemp, sa.data[0]); }
+				for (size_t k = 0; k < loopMax[3]; ++k) {
 					if (!pReader.ReadNum(sa.data[k].tableFlag  )) return false;
 					if (!pReader.ReadNum(sa.data[k].availableID)) return false;
 				}
+				if (defSize[3] > 0) { sa.data.resize(defSize[3]); defSize[3] = 0; }
 			}
+			if (defSize[2] > 0) { nowData.controlData2nd.controlData2ndSA.resize(defSize[2]); defSize[2] = 0; }
 
 			// ComSA
-			if (!pReader.ReadNum(sizeTemp)) return false;
-			elemSize = sizeTemp < nowData.controlData2nd.controlDataComSA.size() ?
-				sizeTemp : nowData.controlData2nd.controlDataComSA.size();
-			for (size_t j = 0; j < elemSize; ++j) {
+			if (!pReader.ReadNum(sizeTemp)) return false; loopMax[2] = sizeTemp;
+			if (sizeTemp > nowData.controlData2nd.controlDataComSA.size()) {
+				defSize[2] = nowData.controlData2nd.controlDataComSA.size();
+				nowData.controlData2nd.controlDataComSA.resize(sizeTemp, nowData.controlData2nd.controlDataComSA[0]);
+			}
+			for (size_t j = 0; j < loopMax[2]; ++j) {
 				auto& sa = nowData.controlData2nd.controlDataComSA[j];
-				if (!pReader.ReadNum(sizeTemp)) return false;
-				const size_t cntMax = sizeTemp < sa.data.size() ? sizeTemp : sa.data.size();
-				for (size_t k = 0; k < cntMax; ++k) {
+				if (!pReader.ReadNum(sizeTemp)) return false; loopMax[3] = sizeTemp;
+				if (sizeTemp > sa.data.size()) { defSize[3] = sa.data.size(); sa.data.resize(sizeTemp, sa.data[0]); }
+				for (size_t k = 0; k < loopMax[3]; ++k) {
 					if (!pReader.ReadNum(sa.data[k].tableFlag  )) return false;
 					if (!pReader.ReadNum(sa.data[k].availableID)) return false;
 				}
+				if (defSize[3] > 0) { sa.data.resize(defSize[3]); defSize[3] = 0; }
 			}
+			if (defSize[2] > 0) { nowData.controlData2nd.controlDataComSA.resize(defSize[2]); defSize[2] = 0; }
 
 			// 3rd
 			if (!pReader.ReadNum(nowData.controlData3rd.activeFlag1st)) return false;
-			if (!pReader.ReadNum(sizeTemp)) return false;
-			elemSize = sizeTemp < nowData.controlData3rd.activeFlag2nd.size() ?
-				sizeTemp : nowData.controlData3rd.activeFlag2nd.size();
-			for (size_t j = 0; j < elemSize; ++j) {
+			if (!pReader.ReadNum(sizeTemp)) return false; loopMax[2] = sizeTemp;
+			if (sizeTemp > nowData.controlData3rd.activeFlag2nd.size()) {
+				defSize[2] = nowData.controlData3rd.activeFlag2nd.size();
+				nowData.controlData3rd.activeFlag2nd.resize(sizeTemp, nowData.controlData3rd.activeFlag2nd[0]);
+			}
+			for (size_t j = 0; j < loopMax[2]; ++j) {
 				if (!pReader.ReadNum(nowData.controlData3rd.activeFlag2nd[j])) return false;
 			}
+			if (defSize[2] > 0) { nowData.controlData3rd.activeFlag2nd.resize(defSize[2]); defSize[2] = 0; }
 
-			if (!pReader.ReadNum(sizeTemp)) return false;
-			elemSize = sizeTemp < nowData.controlData3rd.availableData.size() ?
-				sizeTemp : nowData.controlData3rd.availableData.size();
-			for (size_t j = 0; j < nowData.controlData3rd.availableData.size(); ++j) {
-				const auto& sa = nowData.controlData3rd.availableData[j];
-				if (!pReader.ReadNum(sizeTemp)) return false;
-				const size_t cntMax = sizeTemp < sa.data.size() ? sizeTemp : sa.data.size();
-				for (size_t k = 0; k < cntMax; ++k) {
+			if (!pReader.ReadNum(sizeTemp)) return false; loopMax[2] = sizeTemp;
+			if (sizeTemp > nowData.controlData3rd.availableData.size()) {
+				defSize[2] = nowData.controlData3rd.availableData.size();
+				nowData.controlData3rd.availableData.resize(sizeTemp, nowData.controlData3rd.availableData[0]);
+			}
+			for (size_t j = 0; j < loopMax[2]; ++j) {
+				auto& sa = nowData.controlData3rd.availableData[j];
+				if (!pReader.ReadNum(sizeTemp)) return false; loopMax[3] = sizeTemp;
+				if (sizeTemp > sa.data.size()) { defSize[3] = sa.data.size(); sa.data.resize(sizeTemp, sa.data[0]); }
+				for (size_t k = 0; k < loopMax[3]; ++k) {
 					if (!pReader.ReadNum(sa.data[k].tableFlag)) return false;
 					if (!pReader.ReadNum(sa.data[k].availableID)) return false;
 				}
+				if (defSize[3] > 0) { sa.data.resize(defSize[3]); defSize[3] = 0; }
 			}
+			if (defSize[2] > 0) { nowData.controlData3rd.availableData.resize(defSize[2]); defSize[2] = 0; }
 		}
+		if (defSize[1] > 0) { ctrlData[i].controlData.resize(defSize[1]); defSize[1] = 0; }
 	}
+	if (defSize[0] > 0) { ctrlData.resize(defSize[0]); defSize[0] = 0; }
 
 	// posData
 	if (!pReader.ReadNum(posData.currentFlagID)) return false;
@@ -917,11 +942,11 @@ bool CSlotControlManager::ReadRestore(CRestoreManagerRead& pReader) {
 	if (!pReader.ReadNum(posData.isWatchLeft)) return false;
 
 	if (!pReader.ReadNum(sizeTemp)) return false;
-	loopCnt = sizeTemp < posData.cursorComa.size() ? sizeTemp : posData.cursorComa.size();
-
-	for (size_t i = 0; i < loopCnt; ++i) {
+	if (sizeTemp > posData.cursorComa.size()) { defSize[0] = posData.cursorComa.size(); posData.cursorComa.resize(sizeTemp, posData.cursorComa[0]); }
+	for (size_t i = 0; i < posData.cursorComa.size(); ++i) {
 		if (!pReader.ReadNum(posData.cursorComa[i])) return false;
 	}
+	if (defSize[0] > 0) { posData.cursorComa.resize(defSize[0]); defSize[0] = 0; }
 
 	AdjustPos();
 	return true;
