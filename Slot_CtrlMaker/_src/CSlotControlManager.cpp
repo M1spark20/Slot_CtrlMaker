@@ -643,12 +643,12 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 				drawPos[posData.stop1st   * 2    ] = posData.cursorComa[0];
 				drawPos[reelPosByOrder[0] * 2    ] = posData.cursorComa[1];
 				if (Get2ndStyle() == 0x00) {				// PSテーブル
-					const unsigned char *const ss1 = GetSS(true);
-					const unsigned char *const ss2 = GetSS(false);
+					const unsigned char *const ss1 = GetSS(-1, true);	// -1:現在選択中のフラグ
+					const unsigned char *const ss2 = GetSS(-1, false);
 					drawPos[posData.stop1st   * 2 + 1] = GetPosFromSlipT(*ss1, posData.cursorComa[0]);
 					drawPos[reelPosByOrder[0] * 2 + 1] = GetPosFromSlipT(*ss2, posData.cursorComa[1]);
 				} else if (Get2ndStyle() == 0x01) {			// SSテーブル
-					const unsigned char *const ss2 = GetSS(false);
+					const unsigned char *const ss2 = GetSS(-1, false);
 					drawPos[posData.stop1st   * 2 + 1] = posData.cursorComa[0];
 					drawPos[reelPosByOrder[0] * 2 + 1] = GetPosFromSlipT(*ss2, posData.cursorComa[1]);
 				} else {									// SAテーブル
