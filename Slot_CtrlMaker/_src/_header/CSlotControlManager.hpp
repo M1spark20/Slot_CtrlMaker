@@ -56,7 +56,7 @@ class CSlotControlManager {
 	unsigned char			SetSlipT(bool& pCHK, const size_t pSrcTableNo, const int pPushPos, const int pNewVal);
 	SControlAvailableDef	SetAvailT(bool& pCHK, const size_t pSrcTableNo, const int pPushPos, const int pNewVal, const unsigned char pTableFlag);
 
-	bool DrawComaBox(int x, int y, const unsigned int pStopPos);
+	bool DrawComaBox(int x, int y, const unsigned int pStopPos, int pLightPos, int boxColor = 0x404040);
 	bool DrawSlipTable(int x, int y, int pFlagID, SSlotGameDataWrapper& pData);
 	bool DrawStopTable(int x, int y, int pFlagID);
 
