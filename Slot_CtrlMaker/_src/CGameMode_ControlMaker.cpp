@@ -43,7 +43,6 @@ enum class EChangeModeFlag CGameMode_ControlMaker::Process(bool pExtendResolutio
 	/*CKeyExport_S& key = CKeyExport_S::GetInstance();
 	if (key.ExportKeyState(KEY_INPUT_F1)) return eModeControlTest;*/
 
-	DxLib::DrawString(0, 0, "ControlMaker Test", 0xFFFF00);
 	return state == EChangeStateFlag::eStateEnd ? EChangeModeFlag::eModeEnd : EChangeModeFlag::eModeContinue;
 }
 

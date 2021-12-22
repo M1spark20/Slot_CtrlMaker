@@ -13,6 +13,7 @@ class CGameState_ControlMakerMain : public IGameStateBase {
 	ISlotFlowManager*		m_pFlowManager;
 	int						mDisplayW, mDisplayH;
 	int						mBGWindow;
+	int						mBGHandle;
 
 public:
 	bool Init(CGameDataManage& pDataManageIns) override;

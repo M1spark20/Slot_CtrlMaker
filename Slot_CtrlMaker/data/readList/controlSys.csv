@@ -4,3 +4,4 @@
 #sysData,flags,3,フラグ抽選
 #sysData,control,4,リール制御
 #sysData,systemFont,7,システムfont
+#sysData,BG,8,画面背景
