@@ -709,7 +709,7 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 		DxLib::DrawFormatString(225, 60, 0xFFFF00, "ctrlType      : %s", ctrlType[Get2ndStyle()].c_str());
 		DxLib::DrawFormatString(225, 80, 0xFFFF00, "tableNo       : %d", tableNo);
 		if(availFlag != "")
-			DxLib::DrawFormatString(225,100, 0xFFFF00, "availFlag     : %s", availFlag);
+			DxLib::DrawFormatString(225,100, 0xFFFF00, "availFlag     : %s", availFlag.c_str());
 	}
 
 	/* テーブル描画・テーブル番号描画 */ {
