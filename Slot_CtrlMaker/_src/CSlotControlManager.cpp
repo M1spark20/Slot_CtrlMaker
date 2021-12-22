@@ -690,13 +690,26 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 	}
 
 	/* 各種情報描画(仮) */ {
-		DxLib::DrawFormatString(277,  0, 0xFFFF00, "currentFlagID : %d", posData.currentFlagID);
-		DxLib::DrawFormatString(277, 20, 0xFFFF00, "selectReel    : %d", posData.selectReel);
-		DxLib::DrawFormatString(277, 40, 0xFFFF00, "currentOrder  : %d", posData.currentOrder);
-		DxLib::DrawFormatString(277, 60, 0xFFFF00, "stop1st       : %d", posData.stop1st);
+		int tableNo = 0;
+		std::string availFlag = "";
+		const auto* const sa = GetSA();
+		if (sa != nullptr) {
+			tableNo = sa->data[posData.selectAvailID].availableID;
+			const auto flag = sa->data[posData.selectAvailID].tableFlag;
+			const std::string availType[] = {"Def", "1up", "1dn", "Rev"};
+			availFlag += availType[flag & 0x3] + ", ";
+			availFlag += (flag & 0x4) ? "Pri" : "Neg";
+		} else {
+			tableNo = *GetSS();
+		}
+		DxLib::DrawFormatString(225,  0, 0xFFFF00, "selectReel    : %d", posData.selectReel);
+		DxLib::DrawFormatString(225, 20, 0xFFFF00, "currentOrder  : %d", posData.currentOrder);
+		DxLib::DrawFormatString(225, 40, 0xFFFF00, "stop1st       : %d", posData.stop1st);
 		const std::string ctrlType[] = {"PushS", "StopS", "2ndSA", "ComSA"};
-		DxLib::DrawFormatString(277, 80, 0xFFFF00, "ctrlType      : %s", ctrlType[Get2ndStyle()].c_str());
-		DxLib::DrawFormatString(277,100, 0xFFFF00, "selectAvailID : %d", posData.selectAvailID);
+		DxLib::DrawFormatString(225, 60, 0xFFFF00, "ctrlType      : %s", ctrlType[Get2ndStyle()].c_str());
+		DxLib::DrawFormatString(225, 80, 0xFFFF00, "tableNo       : %d", tableNo);
+		if(availFlag != "")
+			DxLib::DrawFormatString(225,100, 0xFFFF00, "availFlag     : %s", availFlag);
 	}
 
 	/* テーブル描画・テーブル番号描画 */ {
