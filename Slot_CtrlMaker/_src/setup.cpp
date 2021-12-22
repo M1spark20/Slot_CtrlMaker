@@ -10,7 +10,7 @@ bool CSetup_S::StartSetup(bool pIsMiniSize){
 	DxLib::SetUseCharCodeFormat(DX_CHARCODEFORMAT_UTF8);	// UTF-8にてゲームを処理する
 	DxLib::SetAlwaysRunFlag(TRUE);							// アクティブじゃないときも処理を行う
 
-	DxLib::SetGraphMode(1280, 720, 32);					// 画面サイズ初期設定
+	DxLib::SetGraphMode(1366, 720, 32);					// 画面サイズ初期設定
 #ifdef __ANDROID__
 #elif __APPLE__
 #else

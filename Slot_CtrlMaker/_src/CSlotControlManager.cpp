@@ -701,7 +701,7 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 
 	/* テーブル描画・テーブル番号描画 */ {
 		// x=275, 298 y = 176
-		int xPos = 255;
+		int xPos = 227;
 		const int yPos = 176;
 		// リール番号描画
 		for (int i = 0; i < m_comaMax; ++i) {
