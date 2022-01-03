@@ -364,10 +364,11 @@ unsigned char* CSlotControlManager::GetSS(int pFlagID, bool pGet1st) {
 	return nullptr;
 }
 
-unsigned char CSlotControlManager::Get2ndStyle() {
+unsigned char CSlotControlManager::Get2ndStyle(const int pPushPos) {
 	const auto& nowMakeData1st = ctrlData[posData.currentFlagID];
 	if (((nowMakeData1st.controlStyle >> posData.stop1st) & 0x1) == 0) return 0x0;
-	const auto& nowMakeData2nd = nowMakeData1st.controlData[posData.stop1st].controlData2nd.controlStyle2nd[posData.cursorComa[0]];
+	const int refPos = pPushPos == -1 ? posData.cursorComa[0] : pPushPos;
+	const auto& nowMakeData2nd = nowMakeData1st.controlData[posData.stop1st].controlData2nd.controlStyle2nd[refPos];
 	return nowMakeData2nd;
 }
 
@@ -519,7 +520,7 @@ bool CSlotControlManager::UpdateActiveFlag() {
 		ctrlIt->controlData3rd.activeFlag1st = active1st;
 
 		for (int pushPos = 0; pushPos < m_comaMax*2; ++pushPos) {	// 0:LR, 1:LR, ...
-			const unsigned char useTable2nd = Get2ndStyle();
+			const unsigned char useTable2nd = Get2ndStyle(pushPos);
 			const bool lrFlag = ((pushPos / m_comaMax) == 0);
 			unsigned long long active2nd = 0;
 			if (useTable2nd == 0x0) {

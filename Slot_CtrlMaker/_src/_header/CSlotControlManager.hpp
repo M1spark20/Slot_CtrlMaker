@@ -35,7 +35,7 @@ class CSlotControlManager {
 	void CheckSA();
 	SControlAvailableDef* GetDef();
 	unsigned char* GetSS(int pFlagID = -1, bool pGet1st = false);
-	unsigned char Get2ndStyle();
+	unsigned char Get2ndStyle(const int pPushPos = -1);
 	bool SetComaPos(const int pMoveOrder, const bool pIsReset, const bool pIsUp);
 	void SwitchATableType();
 	void SetAvailCtrlPattern(unsigned char pNewFlag);
