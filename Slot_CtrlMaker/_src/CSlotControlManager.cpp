@@ -262,6 +262,7 @@ bool CSlotControlManager::ActionTableID(bool pIsUp) {
 			refData->availableID = newID;
 			--tableAvailable[srcID].refNum;
 			++tableAvailable[newID].refNum;
+			m_refreshFlag = true;
 			return UpdateActiveFlag();
 		}
 		return false;
@@ -277,6 +278,7 @@ bool CSlotControlManager::ActionTableID(bool pIsUp) {
 			*refDataSS = newID;
 			--tableSlip[srcID].refNum;
 			++tableSlip[newID].refNum;
+			m_refreshFlag = true;
 			return UpdateActiveFlag();
 		}
 	}
@@ -350,11 +352,11 @@ unsigned char* CSlotControlManager::GetSS(int pFlagID, bool pGet1st) {
 		return &nowCtrlData.controlData1st;
 	} else if (posData.currentOrder == 1) {			// 2nd制御
 		if (styleData == 0x0) {						// 2ndPushSlip
-			int index = posData.cursorComa[0] + posData.isWatchLeft ? 0 : m_comaMax;
+			int index = posData.cursorComa[0] + (posData.isWatchLeft ? 0 : m_comaMax);
 			return &nowCtrlData.controlData2nd.controlData2ndPS[index];
 		}
 		else if (styleData == 0x1) {				// 2ndStopSlip(cursorComa[0]に制限あり)
-			int index = posData.cursorComa[0] + posData.isWatchLeft ? 0 : m_comaMax;;
+			int index = posData.cursorComa[0] + (posData.isWatchLeft ? 0 : m_comaMax);
 			return &nowCtrlData.controlData2nd.controlData2ndSS[index];
 		}
 	}
@@ -692,10 +694,10 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 	/* 各種情報描画(仮) */ {
 		int tableNo = 0;
 		std::string availFlag = "";
-		const auto* const sa = GetSA();
-		if (sa != nullptr) {
-			tableNo = sa->data[posData.selectAvailID].availableID;
-			const auto flag = sa->data[posData.selectAvailID].tableFlag;
+		const auto* const sd = GetDef();
+		if (sd != nullptr) {
+			tableNo = sd->availableID;
+			const auto flag = sd->tableFlag;
 			const std::string availType[] = {"Def", "1up", "1dn", "Rev"};
 			availFlag += availType[flag & 0x3] + ", ";
 			availFlag += (flag & 0x4) ? "Pri" : "Neg";
@@ -735,7 +737,10 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 		// 参考資料として他テーブルを描画
 		for (int flagC = 0; flagC < m_flagMax; ++flagC) {
 			if (flagC == posData.currentFlagID) continue;
-			if (!GetCanStop(posData.selectReel, posData.cursorComa[posData.selectReel], flagC)) continue;
+			bool isNotStop = false;
+			for (int i = 0; i < posData.currentOrder; ++i) 
+				if (!GetCanStop(i, posData.cursorComa[i], flagC)) { isNotStop = true; continue; }
+			if (isNotStop) continue;
 
 			DrawSlipTable(xPos, yPos, flagC, pData);
 			xPos += BOX_W;
@@ -800,7 +805,7 @@ bool CSlotControlManager::DrawStopTable(int x, int y, int pFlagID) {
 		const int posX = x + BOX_W * j;
 		unsigned long long stopFlag = 0;
 		/* 停止位置呼び出し */ {
-			const int index = j + posData.isWatchLeft ? 0 : AVAIL_ID_MAX;
+			const int index = j + (posData.isWatchLeft ? 0 : AVAIL_ID_MAX);
 			const auto nowTableID = sa->data[index].availableID;
 			const int boxColor = (j == posData.selectAvailID) ? 0x8080FF : 0x404040;
 			stopFlag = GetAvailShiftData(*sa, j, posData.isWatchLeft);
