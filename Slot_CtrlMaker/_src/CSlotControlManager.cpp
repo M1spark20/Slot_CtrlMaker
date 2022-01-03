@@ -520,7 +520,7 @@ bool CSlotControlManager::UpdateActiveFlag() {
 
 		const unsigned char useTable2nd = Get2ndStyle();
 		for (int pushPos = 0; pushPos < m_comaMax*2; ++pushPos) {	// 0:LR, 1:LR, ...
-			const bool lrFlag = ((pushPos % m_comaMax) == 0);
+			const bool lrFlag = ((pushPos / m_comaMax) == 0);
 			unsigned long long active2nd = 0;
 			if (useTable2nd == 0x0) {
 				const int ref2nd = (pushPos % m_comaMax) + (m_comaMax * (pushPos / m_comaMax));
@@ -543,9 +543,9 @@ bool CSlotControlManager::UpdateActiveFlag() {
 			}
 
 			if (lrFlag) {
-				ctrlIt->controlData3rd.activeFlag2nd[pushPos / 2] = active2nd;
+				ctrlIt->controlData3rd.activeFlag2nd[pushPos % m_comaMax] = active2nd;
 			} else {
-				ctrlIt->controlData3rd.activeFlag2nd[pushPos / 2] |= (active2nd << m_comaMax);
+				ctrlIt->controlData3rd.activeFlag2nd[pushPos % m_comaMax] |= (active2nd << m_comaMax);
 			}
 		}
 	}
