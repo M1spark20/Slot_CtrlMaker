@@ -520,7 +520,7 @@ bool CSlotControlManager::UpdateActiveFlag() {
 		ctrlIt->controlData3rd.activeFlag1st = active1st;
 
 		for (int pushPos = 0; pushPos < m_comaMax*2; ++pushPos) {	// 0:LR, 1:LR, ...
-			const unsigned char useTable2nd = Get2ndStyle(pushPos);
+			const unsigned char useTable2nd = Get2ndStyle(pushPos % m_comaMax);
 			const bool lrFlag = ((pushPos / m_comaMax) == 0);
 			unsigned long long active2nd = 0;
 			if (useTable2nd == 0x0) {
