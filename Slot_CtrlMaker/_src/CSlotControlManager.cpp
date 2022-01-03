@@ -826,6 +826,7 @@ bool CSlotControlManager::ReadRestore(CRestoreManagerRead& pReader) {
 	size_t sizeTemp = 0;
 	size_t defSize[4] = { 0,0,0,0 };
 	size_t loopMax[4] = { 0,0,0,0 };
+	bool   canCountRef[4] = { true, true, true, true };	// ループカウントがdefSize以上となる場合破棄されるのでrefNumに追加しないようにするための変数
 
 	// tableSlip
 	if (!pReader.ReadNum(sizeTemp)) return false; loopMax[0] = sizeTemp;
@@ -833,7 +834,10 @@ bool CSlotControlManager::ReadRestore(CRestoreManagerRead& pReader) {
 	for (size_t i = 0; i < loopMax[0]; ++i) {
 		if (!pReader.ReadNum(tableSlip[i].data     )) return false;
 		if (!pReader.ReadNum(tableSlip[i].activePos)) return false;
-		if (!pReader.ReadNum(tableSlip[i].refNum   )) return false;
+		// Version:3移行はctrlData読み込み時に計算する → 読み込むだけ読み込んで0初期化
+		if (pReader.GetReadVer()<=2)
+			if (!pReader.ReadNum(tableSlip[i].refNum   )) return false;
+		tableSlip[i].refNum = 0;
 	}
 	if (defSize[0] > 0) { tableSlip.resize(defSize[0]); defSize[0] = 0; }
 	
@@ -842,7 +846,10 @@ bool CSlotControlManager::ReadRestore(CRestoreManagerRead& pReader) {
 	if (sizeTemp > tableAvailable.size()) { defSize[0] = tableAvailable.size(); tableAvailable.resize(sizeTemp, tableAvailable[0]); }
 	for (size_t i = 0; i < loopMax[0]; ++i) {
 		if (!pReader.ReadNum(tableAvailable[i].data     )) return false;
-		if (!pReader.ReadNum(tableAvailable[i].refNum   )) return false;
+		// Version:3移行はctrlData読み込み時に計算する → 読み込むだけ読み込んで0初期化
+		if (pReader.GetReadVer()<=2)
+			if (!pReader.ReadNum(tableAvailable[i].refNum   )) return false;
+		tableAvailable[i].refNum = 0;
 	}
 	if (defSize[0] > 0) { tableAvailable.resize(defSize[0]); defSize[0] = 0; }
 
@@ -850,14 +857,17 @@ bool CSlotControlManager::ReadRestore(CRestoreManagerRead& pReader) {
 	if (!pReader.ReadNum(sizeTemp)) return false; loopMax[0] = sizeTemp;
 	if (sizeTemp > ctrlData.size()) { defSize[0] = ctrlData.size(); ctrlData.resize(sizeTemp, ctrlData[0]); }
 	for (size_t i = 0; i < loopMax[0]; ++i) {
+		canCountRef[0] = (defSize[0] == 0 || i < defSize[0]);
 		if (!pReader.ReadNum(ctrlData[i].dataID      )) return false;
 		if (!pReader.ReadNum(ctrlData[i].controlStyle)) return false;
 
 		if (!pReader.ReadNum(sizeTemp)) return false; loopMax[1] = sizeTemp;
 		if (sizeTemp > ctrlData[i].controlData.size()) { defSize[1] = ctrlData[i].controlData.size(); ctrlData[i].controlData.resize(sizeTemp, ctrlData[i].controlData[0]); }
 		for (size_t dataC = 0; dataC < loopMax[1]; ++dataC) {
+			canCountRef[1] = canCountRef[0] && (defSize[1] == 0 || dataC < defSize[1]);
 			auto& nowData = ctrlData[i].controlData[dataC];
 			if (!pReader.ReadNum(nowData.controlData1st)) return false;
+			if (canCountRef[1]) tableSlip[nowData.controlData1st].refNum++;	// refNum使用実績確認
 			if (!pReader.ReadNum(nowData.controlData2nd.activeFlag)) return false;
 
 			// PS
@@ -867,8 +877,10 @@ bool CSlotControlManager::ReadRestore(CRestoreManagerRead& pReader) {
 				nowData.controlData2nd.controlData2ndPS.resize(sizeTemp, nowData.controlData2nd.controlData2ndPS[0]);
 			}
 			for (size_t j = 0; j < loopMax[2]; ++j) {
+				canCountRef[2] = canCountRef[1] && (defSize[2] == 0 || j < defSize[2]);
 				auto& ps = nowData.controlData2nd.controlData2ndPS[j];
 				if (!pReader.ReadNum(ps)) return false;
+				if (canCountRef[2]) tableSlip[ps].refNum++;		// refNum使用実績確認
 			}
 			if (defSize[2] > 0) { nowData.controlData2nd.controlData2ndPS.resize(defSize[2]); defSize[2] = 0; }
 
@@ -879,8 +891,10 @@ bool CSlotControlManager::ReadRestore(CRestoreManagerRead& pReader) {
 				nowData.controlData2nd.controlData2ndSS.resize(sizeTemp, nowData.controlData2nd.controlData2ndSS[0]);
 			}
 			for (size_t j = 0; j < loopMax[2]; ++j) {
+				canCountRef[2] = canCountRef[1] && (defSize[2] == 0 || j < defSize[2]);
 				auto& ss = nowData.controlData2nd.controlData2ndSS[j];
 				if (!pReader.ReadNum(ss)) return false;
+				if (canCountRef[2]) tableSlip[ss].refNum++;		// refNum使用実績確認
 			}
 			if (defSize[2] > 0) { nowData.controlData2nd.controlData2ndSS.resize(defSize[2]); defSize[2] = 0; }
 
@@ -891,12 +905,15 @@ bool CSlotControlManager::ReadRestore(CRestoreManagerRead& pReader) {
 				nowData.controlData2nd.controlData2ndSA.resize(sizeTemp, nowData.controlData2nd.controlData2ndSA[0]);
 			}
 			for (size_t j = 0; j < loopMax[2]; ++j) {
+				canCountRef[2] = canCountRef[1] && (defSize[2] == 0 || j < defSize[2]);
 				auto& sa = nowData.controlData2nd.controlData2ndSA[j];
 				if (!pReader.ReadNum(sizeTemp)) return false; loopMax[3] = sizeTemp;
 				if (sizeTemp > sa.data.size()) { defSize[3] = sa.data.size(); sa.data.resize(sizeTemp, sa.data[0]); }
 				for (size_t k = 0; k < loopMax[3]; ++k) {
+					canCountRef[3] = canCountRef[2] && (defSize[3] == 0 || k < defSize[3]);
 					if (!pReader.ReadNum(sa.data[k].tableFlag  )) return false;
 					if (!pReader.ReadNum(sa.data[k].availableID)) return false;
+					if (canCountRef[3]) tableAvailable[sa.data[k].availableID].refNum++;	// refNum使用実績確認
 				}
 				if (defSize[3] > 0) { sa.data.resize(defSize[3]); defSize[3] = 0; }
 			}
@@ -909,12 +926,15 @@ bool CSlotControlManager::ReadRestore(CRestoreManagerRead& pReader) {
 				nowData.controlData2nd.controlDataComSA.resize(sizeTemp, nowData.controlData2nd.controlDataComSA[0]);
 			}
 			for (size_t j = 0; j < loopMax[2]; ++j) {
+				canCountRef[2] = canCountRef[1] && (defSize[2] == 0 || j < defSize[2]);
 				auto& sa = nowData.controlData2nd.controlDataComSA[j];
 				if (!pReader.ReadNum(sizeTemp)) return false; loopMax[3] = sizeTemp;
 				if (sizeTemp > sa.data.size()) { defSize[3] = sa.data.size(); sa.data.resize(sizeTemp, sa.data[0]); }
 				for (size_t k = 0; k < loopMax[3]; ++k) {
+					canCountRef[3] = canCountRef[2] && (defSize[3] == 0 || k < defSize[3]);
 					if (!pReader.ReadNum(sa.data[k].tableFlag  )) return false;
 					if (!pReader.ReadNum(sa.data[k].availableID)) return false;
+					if (canCountRef[3]) tableAvailable[sa.data[k].availableID].refNum++;	// refNum使用実績確認
 				}
 				if (defSize[3] > 0) { sa.data.resize(defSize[3]); defSize[3] = 0; }
 			}
@@ -938,12 +958,15 @@ bool CSlotControlManager::ReadRestore(CRestoreManagerRead& pReader) {
 				nowData.controlData3rd.availableData.resize(sizeTemp, nowData.controlData3rd.availableData[0]);
 			}
 			for (size_t j = 0; j < loopMax[2]; ++j) {
+				canCountRef[2] = canCountRef[1] && (defSize[2] == 0 || j < defSize[2]);
 				auto& sa = nowData.controlData3rd.availableData[j];
 				if (!pReader.ReadNum(sizeTemp)) return false; loopMax[3] = sizeTemp;
 				if (sizeTemp > sa.data.size()) { defSize[3] = sa.data.size(); sa.data.resize(sizeTemp, sa.data[0]); }
 				for (size_t k = 0; k < loopMax[3]; ++k) {
+					canCountRef[3] = canCountRef[2] && (defSize[3] == 0 || k < defSize[3]);
 					if (!pReader.ReadNum(sa.data[k].tableFlag)) return false;
 					if (!pReader.ReadNum(sa.data[k].availableID)) return false;
+					if (canCountRef[3]) tableAvailable[sa.data[k].availableID].refNum++;	// refNum使用実績確認
 				}
 				if (defSize[3] > 0) { sa.data.resize(defSize[3]); defSize[3] = 0; }
 			}
@@ -952,6 +975,11 @@ bool CSlotControlManager::ReadRestore(CRestoreManagerRead& pReader) {
 		if (defSize[1] > 0) { ctrlData[i].controlData.resize(defSize[1]); defSize[1] = 0; }
 	}
 	if (defSize[0] > 0) { ctrlData.resize(defSize[0]); defSize[0] = 0; }
+
+	// refPos[0](No Data)の参照数付けなおし
+	tableSlip[0].refNum = INT_MAX;	tableAvailable[0].refNum = INT_MAX;
+	for (size_t i = 1; i < tableSlip.size(); ++i) tableSlip[0].refNum -= tableSlip[i].refNum;
+	for (size_t i = 1; i < tableAvailable.size(); ++i) tableAvailable[0].refNum -= tableAvailable[i].refNum;
 
 	// posData
 	if (!pReader.ReadNum(posData.currentFlagID)) return false;
@@ -978,14 +1006,16 @@ bool CSlotControlManager::WriteRestore(CRestoreManagerWrite& pWriter) const {
 	for (size_t i = 0; i < tableSlip.size(); ++i) {
 		if (!pWriter.WriteNum(tableSlip[i].data     )) return false;
 		if (!pWriter.WriteNum(tableSlip[i].activePos)) return false;
-		if (!pWriter.WriteNum(tableSlip[i].refNum   )) return false;
+		// Version=2で打ち切り(読み込み時に計算)
+		//if (!pWriter.WriteNum(tableSlip[i].refNum   )) return false;
 	}
 
 	// tableAvailable(activePosは使用しない)
 	if (!pWriter.WriteNum(tableAvailable.size())) return false;
 	for (size_t i = 0; i < tableAvailable.size(); ++i) {
 		if (!pWriter.WriteNum(tableAvailable[i].data  )) return false;
-		if (!pWriter.WriteNum(tableAvailable[i].refNum)) return false;
+		// Version=2で打ち切り(読み込み時に計算)
+		//if (!pWriter.WriteNum(tableAvailable[i].refNum)) return false;
 	}
 
 	// ctrlData

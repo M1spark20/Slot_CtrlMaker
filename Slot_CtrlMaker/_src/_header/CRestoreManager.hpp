@@ -5,7 +5,7 @@
 
 class IRestoreManager {
 protected:
-	static const int VERSION = 2;
+	static const int VERSION = 3;
 	const std::string cFileName;
 	std::string GetDefaultFilePath() const;
 
