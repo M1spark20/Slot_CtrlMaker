@@ -15,9 +15,11 @@
 [適用テーブル定義]
 dataID: 8bit (フラグデータID)
 tableSize:8bit (byte単位のサイズ)
-controlStyle: 2bit*3 (1st_LCR)
-	00:2nd押し位置スベリT, 01:2nd停止位置スベリT, 10:2nd停止位置引込T, 11:2nd/3rd共通引込T
 1st停止T: 8bit*3(スベリT_ID:0-255 * LCR)
+
+[以降、pushPos,LCRで63個データ定義]
+controlStyle: 2bit
+	00:2nd押し位置スベリT, 01:2nd停止位置スベリT, 10:2nd停止位置引込T, 11:2nd/3rd共通引込T
 
 [00:2nd押し位置スベリT の場合]
 	下記[A]→[C]の順に適用

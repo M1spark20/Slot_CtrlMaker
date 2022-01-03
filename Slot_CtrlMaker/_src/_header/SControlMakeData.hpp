@@ -22,6 +22,8 @@ struct SControlDataSA {
 struct SControlMakeData2nd {
 	// 以下は位置毎に管理し、書き出すときに使用するもののみ適用
 	unsigned int						activeFlag;			// 停止可否(0:非停止/1:停止, max32bit)
+	/* 00:2nd押し位置スベリT(コード上未使用), 01:2nd停止位置スベリT, 10:2nd停止位置引込T, 11:2nd/3rd共通引込T */
+	std::vector<unsigned char>			controlStyle2nd;	// use 2bit*m_comaMax 1stがPushの時は無視され00扱いになる
 	std::vector<unsigned char>			controlData2ndPS;	// 2nd押し位置(Push)スベリ(Slip)T 8bit:SlipT_ID * reelComa*2
 	std::vector<unsigned char>			controlData2ndSS;	// 2nd停止位置スベリ(Slip)T 8bit:SlipT_ID * reelComa(非停止位置も定義)
 	std::vector<SControlDataSA>			controlData2ndSA;	// 2nd停止位置(Stop)引込(Available)T 8bit:AvailT_ID * reelComa(非停止位置も定義)
@@ -42,7 +44,6 @@ struct SControlMakeDataWrapper {
 
 struct SControlMakeData {
 	unsigned char						dataID;				// use 8bit
-	/* 00:2nd押し位置スベリT, 01:2nd停止位置スベリT, 10:2nd停止位置引込T, 11:2nd/3rd共通引込T */
-	unsigned char						controlStyle;		// use 6bit
+	unsigned char						controlStyle;		// use 3bit(LCR, 0:Push, 1:Stop)
 	std::vector<SControlMakeDataWrapper>controlData;		// 制御データ(LCR)
 };

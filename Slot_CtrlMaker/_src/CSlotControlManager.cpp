@@ -36,6 +36,7 @@ bool CSlotControlManager::Init(const SSlotGameDataWrapper& pData) {
 			SControlDataSA sa; sa.data.resize(AVAIL_ID_MAX * 2, sd);
 
 			wrapper.controlData2nd.activeFlag = allStopFlag;
+			wrapper.controlData2nd.controlStyle2nd.resize(comaMax, 1);
 			wrapper.controlData2nd.controlData2ndPS.resize(comaMax * 2, 0);
 			wrapper.controlData2nd.controlData2ndSS.resize(comaMax * 2, 0);
 			wrapper.controlData2nd.controlData2ndSA.resize(comaMax, sa);
@@ -364,19 +365,34 @@ unsigned char* CSlotControlManager::GetSS(int pFlagID, bool pGet1st) {
 }
 
 unsigned char CSlotControlManager::Get2ndStyle() {
-	auto& nowMakeData = ctrlData[posData.currentFlagID];
-	return (nowMakeData.controlStyle >> (posData.stop1st * 2)) & 0x3;
+	const auto& nowMakeData1st = ctrlData[posData.currentFlagID];
+	if (((nowMakeData1st.controlStyle >> posData.stop1st) & 0x1) == 0) return 0x0;
+	const auto& nowMakeData2nd = nowMakeData1st.controlData[posData.stop1st].controlData2nd.controlStyle2nd[posData.cursorComa[0]];
+	return nowMakeData2nd;
 }
 
 // [act]制御パターン種別切り替え(1:PS, 2:SS, 3:SA, 4:Com)
 void CSlotControlManager::SetAvailCtrlPattern(unsigned char pNewFlag) {
-	if (posData.currentOrder != 0) return;
-	auto& nowMakeData = ctrlData[posData.currentFlagID];
-	const int offset = (posData.stop1st * 2);
-	// 現在の設定削除
-	nowMakeData.controlStyle &= ~(0x03 << offset);
-	// 新規設定導入
-	nowMakeData.controlStyle |= ((pNewFlag & 0x03) << offset);
+	if (posData.currentOrder == 0) {
+		auto& nowMakeData = ctrlData[posData.currentFlagID];
+		const int offset = (posData.stop1st);
+		// 現在の設定削除(1st)(pNewFlag == 0の場合はこのままにする)
+		nowMakeData.controlStyle &= ~(0x1 << offset);
+
+		if (pNewFlag >= 1) {
+			// 新規設定導入(1st)
+			nowMakeData.controlStyle |= (0x1 << offset);
+		}
+	}
+	else if (posData.currentOrder == 1) {
+		if (ctrlData[posData.currentFlagID].controlStyle == 0) return;
+		if (pNewFlag == 0) return;
+		auto& nowMakeData = ctrlData[posData.currentFlagID].controlData[posData.stop1st].controlData2nd.controlStyle2nd[posData.cursorComa[0]];
+		// 新規設定導入(2nd)
+		nowMakeData = pNewFlag;
+	}
+	else return;
+
 	UpdateActiveFlag();
 	m_refreshFlag = true;
 }
@@ -857,6 +873,9 @@ bool CSlotControlManager::ReadRestore(CRestoreManagerRead& pReader) {
 	if (!pReader.ReadNum(sizeTemp)) return false; loopMax[0] = sizeTemp;
 	if (sizeTemp > ctrlData.size()) { defSize[0] = ctrlData.size(); ctrlData.resize(sizeTemp, ctrlData[0]); }
 	for (size_t i = 0; i < loopMax[0]; ++i) {
+		// Version<=3時 ctrlData[i].controlStyle更新用
+		unsigned char cont1stRef = 0;
+
 		canCountRef[0] = (defSize[0] == 0 || i < defSize[0]);
 		if (!pReader.ReadNum(ctrlData[i].dataID      )) return false;
 		if (!pReader.ReadNum(ctrlData[i].controlStyle)) return false;
@@ -869,6 +888,30 @@ bool CSlotControlManager::ReadRestore(CRestoreManagerRead& pReader) {
 			if (!pReader.ReadNum(nowData.controlData1st)) return false;
 			if (canCountRef[1]) tableSlip[nowData.controlData1st].refNum++;	// refNum使用実績確認
 			if (!pReader.ReadNum(nowData.controlData2nd.activeFlag)) return false;
+
+			// controlStyle2ndの更新
+			if (pReader.GetReadVer() <= 3) {
+				const unsigned char styleVal = (ctrlData[i].controlStyle >> 2 * dataC) & 0x3;
+				if (styleVal > 0) {
+					for (size_t styleC = 0; styleC < nowData.controlData2nd.controlStyle2nd.size(); ++styleC) {
+						nowData.controlData2nd.controlStyle2nd[styleC] = styleVal;
+					}
+					cont1stRef |= (0x1 << dataC);
+				}
+				if (dataC + 1 >= loopMax[1]) ctrlData[i].controlStyle = cont1stRef;
+			} else {
+				if (!pReader.ReadNum(sizeTemp)) return false; loopMax[2] = sizeTemp;
+				if (sizeTemp > nowData.controlData2nd.controlStyle2nd.size()) {
+					defSize[2] = nowData.controlData2nd.controlStyle2nd.size();
+					nowData.controlData2nd.controlStyle2nd.resize(sizeTemp, nowData.controlData2nd.controlStyle2nd[0]);
+				}
+				for (size_t j = 0; j < loopMax[2]; ++j) {
+					canCountRef[2] = canCountRef[1] && (defSize[2] == 0 || j < defSize[2]);
+					auto& style = nowData.controlData2nd.controlStyle2nd[j];
+					if (!pReader.ReadNum(style)) return false;
+				}
+				if (defSize[2] > 0) { nowData.controlData2nd.controlStyle2nd.resize(defSize[2]); defSize[2] = 0; }
+			}
 
 			// PS
 			if (!pReader.ReadNum(sizeTemp)) return false; loopMax[2] = sizeTemp;
@@ -1029,6 +1072,13 @@ bool CSlotControlManager::WriteRestore(CRestoreManagerWrite& pWriter) const {
 			const auto& nowData = ctrlData[i].controlData[dataC];
 			if (!pWriter.WriteNum(nowData.controlData1st)) return false;
 			if (!pWriter.WriteNum(nowData.controlData2nd.activeFlag)) return false;
+
+			// controlStyle2nd
+			if (!pWriter.WriteNum(nowData.controlData2nd.controlStyle2nd.size())) return false;
+			for (size_t j = 0; j < nowData.controlData2nd.controlStyle2nd.size(); ++j) {
+				const auto& style = nowData.controlData2nd.controlStyle2nd[j];
+				if (!pWriter.WriteNum(style)) return false;
+			}
 
 			// PS
 			if (!pWriter.WriteNum(nowData.controlData2nd.controlData2ndPS.size())) return false;
