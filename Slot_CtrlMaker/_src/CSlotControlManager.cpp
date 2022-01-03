@@ -140,16 +140,16 @@ void CSlotControlManager::AdjustPos() {
 	int orderLim = reelMax;
 	// 共通制御時2nd/3rdはcurrentOrder = 1で頭打ち
 	if (Get2ndStyle() == 0x03) orderLim -= 1;
-	while (posData.currentOrder < 0) posData.currentOrder += orderLim;
-	while (posData.currentOrder >= orderLim) posData.currentOrder -= orderLim;
+	while (posData.currentOrder < 0) posData.currentOrder = 0;
+	while (posData.currentOrder >= orderLim) posData.currentOrder = orderLim - 1;
 
 	int selectLim = posData.currentOrder + 1;
 	// 共通制御時2nd/3rdは全リール操作可能とし、isWatchLeftを可変させる
 	if (posData.currentOrder >= 1 && Get2ndStyle() == 0x03) {
 		selectLim = m_reelMax;	posData.isWatchLeft = !(posData.selectReel == 2);
 	}
-	while (posData.selectReel < 0) posData.selectReel += selectLim;
-	while (posData.selectReel >= selectLim) posData.selectReel -= selectLim;
+	while (posData.selectReel < 0) posData.selectReel = 0;
+	while (posData.selectReel >= selectLim) posData.selectReel = selectLim - 1;
 
 	if (isSilp()) posData.selectAvailID = 0;
 	while (posData.selectAvailID < 0) posData.selectAvailID += AVAIL_ID_MAX;
@@ -533,7 +533,7 @@ bool CSlotControlManager::UpdateActiveFlag() {
 				active2nd = GetActiveFromAvailT(ctrlIt->controlData2nd.controlData2ndSA[ref2nd], lrFlag);
 				// 引込不可時無効データ -> activeデータクリアして終了
 				if (active2nd == 0) {
-					ctrlIt->controlData3rd.activeFlag2nd[pushPos / 2] = 0;
+					ctrlIt->controlData3rd.activeFlag2nd[pushPos % m_comaMax] = 0;
 					return true;
 				}
 			} else if (useTable2nd == 0x3) {
