@@ -787,10 +787,14 @@ bool CSlotControlManager::DrawSlipTable(int x, int y, int pFlagID, SSlotGameData
 
 	DxLib::DrawString(x - 1, y - BOX_H*2 + 14, flagName .c_str(), 0xFFFF00);
 	DxLib::DrawString(x - 1, y - BOX_H   +  4, bonusName.c_str(), 0xFFFF00);
+
+	int highLightPos = posData.currentOrder;
+	if (Get2ndStyle() == 0x3 && posData.selectReel == 2) highLightPos = 2;
+
 	if (isSilp(pFlagID)) {
 		const auto ss = GetSS(pFlagID);
 		if (ss == nullptr) return false;
-		DrawComaBox(x-3, y-6, tableSlip[*ss].activePos, posData.cursorComa[posData.currentOrder]);
+		DrawComaBox(x-3, y-6, tableSlip[*ss].activePos, posData.cursorComa[highLightPos]);
 		for (int i = 0; i < m_comaMax; ++i) {
 			const int posY = y + 26 * (m_comaMax - i - 1);
 			int stopPos = GetPosFromSlipT(*ss, i);
@@ -801,7 +805,7 @@ bool CSlotControlManager::DrawSlipTable(int x, int y, int pFlagID, SSlotGameData
 		SControlDataSA* sa = GetSA(pFlagID);
 		if(sa == nullptr) return false;
 		const unsigned int stopFlag = m_isSuspend ? 0 : GetActiveFromAvailT(*sa, posData.isWatchLeft);
-		DrawComaBox(x-3, y-6, stopFlag, posData.cursorComa[posData.currentOrder]);
+		DrawComaBox(x-3, y-6, stopFlag, posData.cursorComa[highLightPos]);
 		for (int i = 0; i < m_comaMax; ++i) {
 			const int posY = y + BOX_H * (m_comaMax - i - 1);
 			if (!m_isSuspend) {
@@ -820,6 +824,10 @@ bool CSlotControlManager::DrawStopTable(int x, int y, int pFlagID) {
 	const int color = (pFlagID == posData.currentFlagID) ? 0xFFFF00 : 0x808080;
 	SControlDataSA* sa = GetSA(pFlagID);
 	if(sa == nullptr) return false;
+
+	int highLightPos = posData.currentOrder;
+	if (Get2ndStyle() == 0x3 && posData.selectReel == 2) highLightPos = 2;
+
 	for (int j = 0; j < AVAIL_ID_MAX; ++j) {
 		const int posX = x + BOX_W * j;
 		unsigned long long stopFlag = 0;
@@ -828,7 +836,7 @@ bool CSlotControlManager::DrawStopTable(int x, int y, int pFlagID) {
 			const auto nowTableID = sa->data[index].availableID;
 			const int boxColor = (j == posData.selectAvailID) ? 0x8080FF : 0x404040;
 			stopFlag = GetAvailShiftData(*sa, j, posData.isWatchLeft);
-			DrawComaBox(posX-3, y-6, stopFlag & 0xFFFFFFFF, posData.cursorComa[posData.currentOrder], boxColor);
+			DrawComaBox(posX-3, y-6, stopFlag & 0xFFFFFFFF, posData.cursorComa[highLightPos], boxColor);
 		}
 		for (int pos = 0; pos < m_comaMax; ++pos) {
 			const int posY = y + BOX_H * (m_comaMax - pos - 1);
