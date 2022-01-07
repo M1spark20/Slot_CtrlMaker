@@ -178,7 +178,7 @@ bool CSlotControlManager::SetComaPos(const int pMoveOrder, const bool pIsReset, 
 		while (diffPos >= m_comaMax)	diffPos -= m_comaMax;
 
 		// 停止可否判定
-		if(!GetCanStop(pMoveOrder, diffPos)) continue;
+		if(!GetCanStop(pMoveOrder, diffPos, posData.currentFlagID, false)) continue;
 		// 場所確定
 		posData.cursorComa[pMoveOrder] = diffPos; return true;
 	}
@@ -187,7 +187,7 @@ bool CSlotControlManager::SetComaPos(const int pMoveOrder, const bool pIsReset, 
 
 // [act]現在の制御条件にてフラグ: pFlagIDの
 // [prm]pMoveOrder	: 今回変更するリールの押し順
-bool CSlotControlManager::GetCanStop(const int pMoveOrder, const int pLookFor, const int pFlagID) {
+bool CSlotControlManager::GetCanStop(const int pMoveOrder, const int pLookFor, const int pFlagID, const bool pCheck1st) {
 	const int flagID = pFlagID < 0 ? posData.currentFlagID : pFlagID;
 	if (flagID >= m_flagMax) return false;
 	auto& nowMakeData = ctrlData[flagID];
@@ -200,7 +200,7 @@ bool CSlotControlManager::GetCanStop(const int pMoveOrder, const int pLookFor, c
 	} else if (posData.currentOrder == 1) {
 		// 2nd変更中：制御方式PS以外 && 参照1st であれば制御をかける
 		// ※制御方式ComSAにて3rdもこのループを参照、制御はかからない
-		if(Get2ndStyle() != 0 && pMoveOrder == 0) {
+		if(Get2ndStyle(-1, pFlagID) != 0 && pMoveOrder == 0 || pCheck1st) {
 			const auto activeData = srcData.controlData2nd.activeFlag;
 			if ((activeData & (1u << pLookFor)) == 0x0) return false;
 		}
@@ -291,7 +291,7 @@ SControlDataSA* CSlotControlManager::GetSA(int pFlagID) {
 	const int flagID = pFlagID < 0 ? posData.currentFlagID : pFlagID;
 	if (flagID >= m_flagMax) return nullptr;
 	auto& nowMakeData = ctrlData[flagID];
-	const auto styleData = Get2ndStyle();
+	const auto styleData = Get2ndStyle(-1, pFlagID);
 	auto& nowCtrlData = nowMakeData.controlData[posData.stop1st];
 
 	if (posData.currentOrder == 0) return nullptr;	// 1st制御(=処理なし)
@@ -347,7 +347,7 @@ unsigned char* CSlotControlManager::GetSS(int pFlagID, bool pGet1st) {
 	const int flagID = pFlagID < 0 ? posData.currentFlagID : pFlagID;
 	if (flagID >= m_flagMax) return nullptr;
 	auto& nowMakeData = ctrlData[flagID];
-	const auto styleData = Get2ndStyle();
+	const auto styleData = Get2ndStyle(-1, pFlagID);
 	auto& nowCtrlData = nowMakeData.controlData[posData.stop1st];
 	if (posData.currentOrder == 0 || pGet1st) {		// 1st制御
 		return &nowCtrlData.controlData1st;
@@ -364,8 +364,10 @@ unsigned char* CSlotControlManager::GetSS(int pFlagID, bool pGet1st) {
 	return nullptr;
 }
 
-unsigned char CSlotControlManager::Get2ndStyle(const int pPushPos) {
-	const auto& nowMakeData1st = ctrlData[posData.currentFlagID];
+unsigned char CSlotControlManager::Get2ndStyle(const int pPushPos, const int pFlagID) {
+	const int flagID = pFlagID < 0 ? posData.currentFlagID : pFlagID;
+	if (flagID >= m_flagMax) return 0;
+	const auto& nowMakeData1st = ctrlData[flagID];
 	if (((nowMakeData1st.controlStyle >> posData.stop1st) & 0x1) == 0) return 0x0;
 	const int refPos = pPushPos == -1 ? posData.cursorComa[0] : pPushPos;
 	const auto& nowMakeData2nd = nowMakeData1st.controlData[posData.stop1st].controlData2nd.controlStyle2nd[refPos];
@@ -503,10 +505,10 @@ SControlAvailableDef CSlotControlManager::SetAvailT(bool& pCHK, const size_t pSr
 	return ans;
 }
 
-bool CSlotControlManager::isSilp() {
+bool CSlotControlManager::isSilp(const int pFlagID) {
 	if (posData.currentOrder == 0) return true;
 	if (posData.currentOrder == 2) return false;
-	return !(Get2ndStyle() & 0x2);
+	return !(Get2ndStyle(-1, pFlagID) & 0x2);
 }
 
 // [act]現在選択中フラグの停止可能位置をアップデートする
@@ -756,7 +758,7 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 			if (flagC == posData.currentFlagID) continue;
 			bool isNotStop = false;
 			for (int i = 0; i < posData.currentOrder; ++i) 
-				if (!GetCanStop(i, posData.cursorComa[i], flagC)) { isNotStop = true; continue; }
+				if (!GetCanStop(i, posData.cursorComa[i], flagC, true)) { isNotStop = true; break; }
 			if (isNotStop) continue;
 
 			DrawSlipTable(xPos, yPos, flagC, pData);
@@ -785,7 +787,7 @@ bool CSlotControlManager::DrawSlipTable(int x, int y, int pFlagID, SSlotGameData
 
 	DxLib::DrawString(x - 1, y - BOX_H*2 + 14, flagName .c_str(), 0xFFFF00);
 	DxLib::DrawString(x - 1, y - BOX_H   +  4, bonusName.c_str(), 0xFFFF00);
-	if (isSilp()) {
+	if (isSilp(pFlagID)) {
 		const auto ss = GetSS(pFlagID);
 		if (ss == nullptr) return false;
 		DrawComaBox(x-3, y-6, tableSlip[*ss].activePos, posData.cursorComa[posData.currentOrder]);

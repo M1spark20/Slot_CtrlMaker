@@ -35,18 +35,18 @@ class CSlotControlManager {
 	void CheckSA();
 	SControlAvailableDef* GetDef();
 	unsigned char* GetSS(int pFlagID = -1, bool pGet1st = false);
-	unsigned char Get2ndStyle(const int pPushPos = -1);
+	unsigned char Get2ndStyle(const int pPushPos = -1, const int pFlagID = -1);
 	bool SetComaPos(const int pMoveOrder, const bool pIsReset, const bool pIsUp);
 	void SwitchATableType();
 	void SetAvailCtrlPattern(unsigned char pNewFlag);
 	void SetAvailShiftConf(unsigned char pNewFlag);
-	bool isSilp();
+	bool isSilp(const int pFlagID = -1);
 	bool canChangeTable();
 	bool UpdateActiveFlag();
 	int Get2ndReel(bool pIsLeft);
 	unsigned long long GetAvailShiftData(unsigned long long pData, const unsigned char pShiftFlag);
 	unsigned long long GetAvailShiftData(const SControlDataSA& pSAData, const int pIndex, bool pIsLeft);
-	bool GetCanStop(const int pMoveOrder, const int pLookFor, const int pFlagID = -1);
+	bool GetCanStop(const int pMoveOrder, const int pLookFor, const int pFlagID, const bool pCheck1st);
 
 	int  GetPosFromSlipT(const size_t pTableNo, const int pPushPos);
 	int  GetPosFromAvailT(const SControlDataSA& pSAData, const int pPushPos, bool pIsLeft);
