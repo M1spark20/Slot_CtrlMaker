@@ -5,3 +5,5 @@
 #sysData,control,4,リール制御
 #sysData,systemFont,7,システムfont
 #sysData,BG,8,画面背景
+#sysData,spot,9,リーチ目コレクションベース
+#sysData,collection,10,リーチ目コレクションベース

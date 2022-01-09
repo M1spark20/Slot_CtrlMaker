@@ -14,6 +14,9 @@ bool CGameState_ControlMakerMain::Init(CGameDataManage& pDataManageIns) {
 	if (!m_data.randManager.Init(pDataManageIns, sysReader.GetSysDataID("flags")))	return false;
 	if (!m_data.castChecker.Init(pDataManageIns, sysReader.GetSysDataID("cast")))	return false;
 	if (!m_data.timeManager.Init(m_data.reelManager.GetReelNum()))					return false;
+	if (!m_data.reelChecker.Init(
+		pDataManageIns, sysReader.GetSysDataID("spot"), sysReader.GetSysDataID("collection"), m_data.reelManager)
+		) return false;
 	mBGHandle = sysReader.GetSysDataID("BG");
 
 	// controlManagerをデータ有で再初期化
