@@ -226,5 +226,5 @@ bool CSlotReachCollectionData::DrawColleElement(const SReachCollectionElement& p
 
 int CSlotReachCollectionData::GetLatchReachID(int pIndex) const {
 	if (pIndex < 0 || pIndex >= (int)mLatch.size()) return -1;
-	return mLatch[pIndex]->dataID - 1;
+	return mLatch[pIndex]->dataID;
 }

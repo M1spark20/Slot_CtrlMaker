@@ -95,6 +95,7 @@ bool CGameState_ControlMakerMain::Draw(CGameDataManage& pDataManageIns) {
 
 	DxLib::SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 255);
 	m_controlManager.Draw(m_data, pDataManageIns, mBGWindow);
+	m_data.reelChecker.Draw();
 
 	DxLib::SetDrawScreen(DX_SCREEN_BACK);
 	DxLib::SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 255);
