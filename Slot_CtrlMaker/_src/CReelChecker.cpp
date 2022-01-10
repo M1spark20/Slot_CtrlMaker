@@ -53,3 +53,13 @@ bool CReelChecker::Draw() {
 	}
 	return true;
 }
+
+SStopPosData CReelChecker::GetPosData(int pFirstStop, std::vector<int> pStopPos) {
+	if (pStopPos.size() < 3) return SStopPosData();
+	int index = pFirstStop * m_comaMax * m_comaMax * m_comaMax;
+	index += pStopPos[0] * m_comaMax * m_comaMax;
+	index += pStopPos[1] * m_comaMax;
+	index += pStopPos[2];
+	if (index >= m_posData.size()) return SStopPosData();
+	return m_posData[index];
+}

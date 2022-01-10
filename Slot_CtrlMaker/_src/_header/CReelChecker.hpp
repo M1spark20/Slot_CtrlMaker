@@ -16,4 +16,6 @@ class CReelChecker {
 public:
 	bool	Init(CGameDataManage& pData, int pFileIDSpot, int pFileIDCollection, const CReelManager& pReelManager);
 	bool	Draw();
+
+	SStopPosData GetPosData(int pFirstStop, std::vector<int> pStopPos);
 };

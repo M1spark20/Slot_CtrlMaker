@@ -2,6 +2,7 @@
 #include "_header/SSlotGameDataWrapper.hpp"
 #include "_header/CRestoreManager.hpp"
 #include "_header/keyexport.h"
+#include "_header/SStopPosData.hpp"
 #include <DxLib.h>
 
 bool CSlotControlManager::Init(const SSlotGameDataWrapper& pData) {
@@ -644,7 +645,7 @@ int CSlotControlManager::GetAvailDistance(const unsigned long long pData, const 
 
 bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDataManageIns, int pDrawFor) {
 	DxLib::SetDrawScreen(pDrawFor);
-	/* ƒŠ[ƒ‹•`‰æ */ {
+	/* ƒŠ[ƒ‹E“üÜ–ğ•`‰æ */ {
 		std::vector<int> drawPos; drawPos.resize(m_reelMax * 2, -1);	// 0PS, 1PS, 2PS
 		const int reelPosByOrder[] = { Get2ndReel(posData.isWatchLeft), Get2ndReel(!posData.isWatchLeft) };
 		/* •`‰æƒŠ[ƒ‹’è‹` */ {
@@ -707,6 +708,22 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 			castPos = (m_comaMax * 2 - 3 - drawPos[i + 1]) % m_comaMax;
 			pData.reelManager.DrawReel(pDataManageIns, drawReel, castPos, pDrawFor);
 			DxLib::DrawFormatString(drawReel.x + posOffset, posY, 0xFFFF00, "%02d", drawPos[i+1] + 1);
+		}
+
+		/* “üÜ–ğ•`‰æ */ {
+			bool drawFlag = true;
+			std::vector<int> checkPos(m_reelMax);
+			for (size_t i = 0; i < checkPos.size(); ++i) {
+				if (drawPos[i * 2 + 1] == -1) { drawFlag = false; break; }
+				checkPos[i] = (m_comaMax * 2 - drawPos[i * 2 + 1] - 3) % m_comaMax;
+			}
+			if (drawFlag) {
+				const auto stopData = pData.reelChecker.GetPosData(posData.stop1st, checkPos);
+				const int color[] = { 0xFFFFFF, 0x009631, 0xFF4040, 0xFF00FF };
+				const int width = DxLib::GetDrawStringWidth(stopData.spotFlag.c_str(), stopData.spotFlag.size());
+				DxLib::DrawString(752 - width / 2, 65, stopData.spotFlag.c_str(), color[stopData.reachLevel]);
+				DxLib::DrawFormatString(744, 80, color[stopData.reachLevel], "L%1d", stopData.reachLevel);
+			}
 		}
 	}
 
