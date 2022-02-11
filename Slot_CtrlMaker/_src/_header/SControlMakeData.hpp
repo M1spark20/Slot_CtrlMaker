@@ -10,9 +10,9 @@ struct SControlTable {
 
 // 引込T定義データ
 struct SControlAvailableDef {
-	/* 3bit -> 1bit:フラグ(0:非停止T,1:優先T), 2bit:シフト(00:無, 01:下1コマ, 10: 上1コマ, 11:反転) */
+	/* 4bit -> 1bit:反転フラグ(0:なし,1:あり), 1bit:フラグ(0:非停止T,1:優先T), 2bit:シフト(00:無, 01:下1コマ, 10: 上1コマ, 11:特定1ヶ所) */
 	unsigned char						tableFlag;
-	unsigned char						availableID;		// 引込T_ID(0-255)
+	unsigned char						availableID;		// 引込T_ID(0-255) or 特定箇所(1-21)
 };
 
 struct SControlDataSA {

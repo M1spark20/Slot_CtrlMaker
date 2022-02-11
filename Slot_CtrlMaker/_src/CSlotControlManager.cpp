@@ -287,7 +287,6 @@ bool CSlotControlManager::ActionTableID(bool pIsUp) {
 	return false;
 }
 
-// [act]停止不能カ所がないか検証・ある場合はm_isSuspendをtrueにする
 SControlDataSA* CSlotControlManager::GetSA(int pFlagID) {
 	const int flagID = pFlagID < 0 ? posData.currentFlagID : pFlagID;
 	if (flagID >= m_flagMax) return nullptr;
@@ -312,6 +311,7 @@ SControlDataSA* CSlotControlManager::GetSA(int pFlagID) {
 
 }
 
+// [act]停止不能カ所がないか検証・ある場合はm_isSuspendをtrueにする
 void CSlotControlManager::CheckSA() {
 	m_isSuspend = false;
 	const SControlDataSA* const sa = GetSA();
@@ -415,13 +415,17 @@ void CSlotControlManager::SwitchATableType() {
 	m_refreshFlag = true;
 }
 
-// [act]SAシフト切り替え(0:シフト無, 1:下1コマ, 2:上1コマ, 3:反転)
+// [act]SAシフト切り替え(0:シフト無, 1:下1コマ, 2:上1コマ, 3:特定)
 void CSlotControlManager::SetAvailShiftConf(unsigned char pNewFlag) {
 	if (!canChangeTable()) return;
 	SControlAvailableDef* refData = GetDef();
 	if (refData == nullptr) return;
 	// 新規フラグ設定
-	refData->tableFlag = (refData->tableFlag & 0xfc) | (pNewFlag & 0x03);
+	if(pNewFlag <= 2) refData->tableFlag = (refData->tableFlag & 0xfc) | (pNewFlag & 0x03);
+	else {
+		if (refData->tableFlag & 0x08) refData->tableFlag &= (~0x08);	// 非反転設定
+		else refData->tableFlag |= 0x08;								// 反転設定
+	}
 
 	CheckSA(); // 停止不能箇所存在確認
 	UpdateActiveFlag();
@@ -467,24 +471,47 @@ unsigned char CSlotControlManager::SetSlipT(bool& pCHK, const size_t pSrcTableNo
 SControlAvailableDef CSlotControlManager::SetAvailT(bool& pCHK, const size_t pSrcTableNo, const int pPushPos, const int pNewVal, const unsigned char pTableFlag) {
 	pCHK = true;
 	const bool isPrior = (pTableFlag & 0x4) != 0;
+	const bool isReverse = (pTableFlag & 0x8) != 0;
 	SControlAvailableDef ans{ 0,0 };
 	if (pSrcTableNo >= tableAvailable.size()) { pCHK = false; return ans; }
 	if (pNewVal < 0 || pNewVal >= 5) { pCHK = false; return ans; }
 
 	// データ作成
-	unsigned long long newData = GetAvailShiftData(tableAvailable[pSrcTableNo].data, pTableFlag);
+	unsigned long long srcData = GetAvailDefData(pSrcTableNo, pTableFlag);
+	unsigned long long newData = GetAvailShiftData(srcData, pTableFlag);
 	const unsigned long long posFlag = 1ull << pPushPos;
 	if (pNewVal >= 1)	newData |=  posFlag;	// 位置有効化
 	else				newData &= ~posFlag;	// 位置無効化
+	if((pTableFlag & 0x03) != 0x03) --tableAvailable[pSrcTableNo].refNum;
+
+	/* ビット数カウント: 1or20なら特定箇所表記へ */ {
+		int bitPos[] = { 0xFF, 0xFF };	// 0個:0xFF, 1個:該当箇所, 2個～:-1
+		int nowBit = newData;
+		for(int i=0; i<m_comaMax; ++i){
+			const int refB = (nowBit & 0x1) ? 1 : 0;
+			if (bitPos[refB] == 0xFF) bitPos[refB] = i; else bitPos[refB] = -1;
+			nowBit >>= 1;
+		}
+		// 検証
+		for (int i = 0; i < 2; ++i) {
+			if (bitPos[i] >= 0 && bitPos[i] != 0xFF) {
+				ans.availableID = bitPos[i] + 1;
+				ans.tableFlag = 0x3;
+				if (isPrior) ans.tableFlag |= 0x4;
+				if (i == 0) ans.tableFlag |= 0x8;	// 0:反転T(0が1つ), 1:非反転T(1が1つ)
+				return ans;
+			}
+		}
+	}
 
 	// 採番
-	--tableAvailable[pSrcTableNo].refNum;
 	size_t firstNonRef = AVAIL_TABLE_MAX;
 	unsigned char hitStyle = 0xFF;
 	for (size_t ref = 0; ref < tableAvailable.size(); ++ref) {
-		for (unsigned char style = 0; style < 4; ++style) {
-			if (GetAvailShiftData(tableAvailable[ref].data, style) == newData) {
-				hitStyle = style; break;
+		for (unsigned char style = 0; style < 3*2; ++style) {
+			const int applyStyle = style % 3 + 8 * (style / 3);
+			if (GetAvailShiftData(tableAvailable[ref].data, applyStyle) == newData) {
+				hitStyle = applyStyle; break;
 			}
 		}
 		// 一致のある場合: ref数を1足してDefを返す
@@ -578,18 +605,28 @@ unsigned long long CSlotControlManager::GetAvailShiftData(unsigned long long pDa
 		pData = (pData >> 1) & allStopFlag;
 		if (addFlag) pData = pData | (0x1ull << (m_comaMax - 1));
 	}
-	if (shiftFlag == 0x3) {	// 反転
+	if (pShiftFlag & 0x8) {	// 反転
 		pData = ~pData & allStopFlag;
 	}
 	return pData;
 }
 
+// [act]フィルタによるシフト・反転前のavailableData停止位置を取得する
+//		特定箇所Tに対応する
+unsigned long long CSlotControlManager::GetAvailDefData(const int pAvailIndex, const unsigned char pTableFlag) {
+	unsigned long long data;
+	if ((pTableFlag & 0x3) == 0x3) data = 1ull << (pAvailIndex - 1);// 特定箇所T
+	else data = tableAvailable[pAvailIndex].data;					// 引き込みT
+	return data;
+}
+
+
 unsigned long long CSlotControlManager::GetAvailShiftData(const SControlDataSA& pSAData, const int pIndex, bool pIsLeft) {
 	if (pIndex < 0 || pIndex >= AVAIL_ID_MAX) return 0;
-	const auto index   = pIndex + (pIsLeft ? 0 : AVAIL_ID_MAX);
-	const auto tableNo = pSAData.data[index].availableID;
-	const auto data    = tableAvailable[tableNo].data;
-	const auto flag    = pSAData.data[index].tableFlag;
+	const auto	index   = pIndex + (pIsLeft ? 0 : AVAIL_ID_MAX);
+	const auto	tableNo = pSAData.data[index].availableID;
+	const auto	flag    = pSAData.data[index].tableFlag;
+	const auto	data	= GetAvailDefData(tableNo, flag);
 	return GetAvailShiftData(data, flag);
 }
 
@@ -600,7 +637,7 @@ int CSlotControlManager::GetPosFromAvailT(const SControlDataSA& pSAData, const i
 	const int offsetLR = pIsLeft ? 0 : AVAIL_ID_MAX;
 	for (int i = 0; i < AVAIL_ID_MAX; ++i) {
 		auto it = pSAData.data.cbegin() + i + offsetLR;
-		unsigned long long availData = tableAvailable[it->availableID].data;
+		unsigned long long availData = GetAvailDefData(it->availableID, it->tableFlag);
 		availData = GetAvailShiftData(availData, it->tableFlag);
 
 		/* 優先度による処理決定 */ {
@@ -734,9 +771,10 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 		if (sd != nullptr) {
 			tableNo = sd->availableID;
 			const auto flag = sd->tableFlag;
-			const std::string availType[] = {"Def", "1up", "1dn", "Rev"};
+			const std::string availType[] = {"Def", "1up", "1dn", "Spt"};
 			availFlag += availType[flag & 0x3] + ", ";
 			availFlag += (flag & 0x4) ? "Pri" : "Neg";
+			availFlag += (flag & 0x8) ? ", Inv" : "";
 		} else {
 			tableNo = *GetSS();
 		}

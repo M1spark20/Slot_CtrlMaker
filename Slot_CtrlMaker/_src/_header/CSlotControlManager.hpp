@@ -44,6 +44,7 @@ class CSlotControlManager {
 	bool canChangeTable();
 	bool UpdateActiveFlag();
 	int Get2ndReel(bool pIsLeft);
+	unsigned long long GetAvailDefData(const int pAvailIndex, const unsigned char pTableFlag);
 	unsigned long long GetAvailShiftData(unsigned long long pData, const unsigned char pShiftFlag);
 	unsigned long long GetAvailShiftData(const SControlDataSA& pSAData, const int pIndex, bool pIsLeft);
 	bool GetCanStop(const int pMoveOrder, const int pLookFor, const int pFlagID, const bool pCheck1st);
