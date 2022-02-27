@@ -116,6 +116,12 @@ bool CSlotControlManager::Process() {
 
 		else if (!m_isSuspend && shiftFlag && key.ExportKeyState(KEY_INPUT_Q)) ActionTableID(true);
 		else if (!m_isSuspend && shiftFlag && key.ExportKeyState(KEY_INPUT_A)) ActionTableID(false);
+		else if (!m_isSuspend && shiftFlag && key.ExportKeyState(KEY_INPUT_W)) {
+			for (int i = 0; i < 10; ++i) ActionTableID(true);
+		}
+		else if (!m_isSuspend && shiftFlag && key.ExportKeyState(KEY_INPUT_S)) {
+			for (int i = 0; i < 10; ++i) ActionTableID(false);
+		}
 		AdjustPos();
 	}
 	return true;
@@ -1104,6 +1110,10 @@ bool CSlotControlManager::ReadRestore(CRestoreManagerRead& pReader) {
 		if (!pReader.ReadNum(posData.cursorComa[i])) return false;
 	}
 	if (defSize[0] > 0) { posData.cursorComa.resize(defSize[0]); defSize[0] = 0; }
+
+	// 各フラグに対してActiveフラグ初期化
+	for (posData.currentFlagID = 0; posData.currentFlagID < m_flagMax; ++posData.currentFlagID)
+		UpdateActiveFlag();
 
 	AdjustPos();
 	return true;
