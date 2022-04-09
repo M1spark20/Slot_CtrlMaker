@@ -64,6 +64,9 @@ bool CSlotControlManager::Init(const SSlotGameDataWrapper& pData) {
 		posData.cursorComa.resize(m_reelMax, 0);
 		posData.selectAvailID = 0;
 		posData.isWatchLeft = true;
+		// 20220408追加
+		posData.subFlagList.clear();
+		posData.subFlagPos = 0;
 	}
 
 	return true;
@@ -93,6 +96,10 @@ bool CSlotControlManager::Process() {
 		else if (!m_isSuspend && !shiftFlag && key.ExportKeyState(KEY_INPUT_PERIOD))++posData.currentOrder;
 		else if (!m_isSuspend && !shiftFlag && key.ExportKeyState(KEY_INPUT_COMMA))	--posData.currentOrder;
 		else if (!m_isSuspend && !shiftFlag && key.ExportKeyState(KEY_INPUT_AT))	posData.isWatchLeft = !posData.isWatchLeft;
+		// 20220408add
+		else if (!m_isSuspend && !shiftFlag && key.ExportKeyState(KEY_INPUT_Q)) ++posData.subFlagPos;
+		else if (!m_isSuspend && !shiftFlag && key.ExportKeyState(KEY_INPUT_A)) --posData.subFlagPos;
+
 
 		// 制御編集系
 		else if (!shiftFlag && key.ExportKeyState(KEY_INPUT_0)) Action(0);
@@ -161,6 +168,14 @@ void CSlotControlManager::AdjustPos() {
 	if (isSilp()) posData.selectAvailID = 0;
 	while (posData.selectAvailID < 0) posData.selectAvailID += AVAIL_ID_MAX;
 	while (posData.selectAvailID >= AVAIL_ID_MAX) posData.selectAvailID -= AVAIL_ID_MAX;
+
+	// 20220408add subFlagPos位置修正
+	if (posData.subFlagList.empty()) {
+		posData.selectReel = 0;
+	} else {
+		while (posData.subFlagPos < 0) posData.subFlagPos = 0;
+		while (posData.subFlagPos >= (int)posData.subFlagList.size()) posData.subFlagPos = posData.subFlagList.size() - 1;
+	}
 
 	// 位置自動調整
 	SetComaPos(posData.selectReel, true, true);
@@ -820,6 +835,7 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 		xPos += BOX_W;
 
 		// 参考資料として他テーブルを描画
+		posData.subFlagList.clear();	// 20220408追加 いちいちクリアする
 		for (int flagC = 0; flagC < m_flagMax; ++flagC) {
 			if (flagC == posData.currentFlagID) continue;
 			bool isNotStop = false;
@@ -829,6 +845,39 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 
 			DrawSlipTable(xPos, yPos, flagC, pData);
 			xPos += BOX_W;
+			posData.subFlagList.push_back(flagC);	// 20220408追加 リスト追加
+		}
+
+		// 20220408追加 定義サブ描画追加
+		if (!posData.subFlagList.empty()) {
+			if (posData.subFlagPos >= 0 && (size_t)posData.subFlagPos < posData.subFlagList.size()) {
+				const int index = posData.subFlagList[posData.subFlagPos];
+
+				// フラグ名描画
+				const std::string flagName  = pData.randManager.GetFlagName (index);
+				const std::string bonusName = pData.randManager.GetBonusName(index);
+				const std::string flagOut   = flagName + " " + bonusName;
+				DxLib::DrawFormatString(1010, 65, 0xF0F0FF, "%s", flagOut.c_str());
+
+				// 制御定義描画
+				if (isSilp(index)) {
+					const auto ss = GetSS(index);
+					if (ss == nullptr) return false;
+					DxLib::DrawFormatString(1010, 80, 0xF0F0FF, "SlipT  : %d", *ss);
+				} else {
+					SControlDataSA* sa = GetSA(index);
+					if (sa == nullptr) return false;
+					DxLib::DrawString(1010, 80, "AvailT :", 0xF0F0FF);
+					for (int i = 0; i < AVAIL_ID_MAX; ++i) {
+						const int index = i + (posData.isWatchLeft ? 0 : AVAIL_ID_MAX);
+						const std::string shiftType[] = {"D", "u", "d", "s"};
+						const std::string invPriorType[] = {"  ", " P", "I ", "IP"};
+						const auto& type = sa->data[i].tableFlag;
+						const std::string typeStr = shiftType[type & 0x3] + invPriorType[(type >> 2) & 0x3];
+						DxLib::DrawFormatString(1090 + i*63, 80, 0xF0F0FF, "%3d%s", sa->data[i].availableID, typeStr.c_str());
+					}
+				}
+			}
 		}
 	}
 	return true;
