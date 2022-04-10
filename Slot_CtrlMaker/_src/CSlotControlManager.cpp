@@ -1151,7 +1151,8 @@ bool CSlotControlManager::ReadRestore(CRestoreManagerRead& pReader) {
 	for (size_t i = 1; i < tableAvailable.size(); ++i) tableAvailable[0].refNum -= tableAvailable[i].refNum;
 
 	// posData
-	if (!pReader.ReadNum(posData.currentFlagID)) return false;
+	int currentFlagIDMemo;
+	if (!pReader.ReadNum(currentFlagIDMemo)) return false;
 	if (!pReader.ReadNum(posData.selectReel)) return false;
 	if (!pReader.ReadNum(posData.currentOrder)) return false;
 	if (!pReader.ReadNum(posData.stop1st)) return false;
@@ -1168,6 +1169,7 @@ bool CSlotControlManager::ReadRestore(CRestoreManagerRead& pReader) {
 	// 各フラグに対してActiveフラグ初期化
 	for (posData.currentFlagID = 0; posData.currentFlagID < m_flagMax; ++posData.currentFlagID)
 		UpdateActiveFlag();
+	posData.currentFlagID = currentFlagIDMemo;
 
 	AdjustPos();
 	return true;
