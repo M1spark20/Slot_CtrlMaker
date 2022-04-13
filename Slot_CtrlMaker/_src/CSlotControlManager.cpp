@@ -308,29 +308,34 @@ bool CSlotControlManager::ActionTableID(bool pIsUp) {
 	return false;
 }
 
-SControlDataSA* CSlotControlManager::GetSA(int pFlagID) {
-	const int flagID = pFlagID < 0 ? posData.currentFlagID : pFlagID;
-	if (flagID >= m_flagMax) return nullptr;
-	auto& nowMakeData = ctrlData[flagID];
-	const auto styleData = Get2ndStyle(-1, pFlagID);
-	auto& nowCtrlData = nowMakeData.controlData[posData.stop1st];
+SControlDataSA* CSlotControlManager::GetSA(int pFlagID, int pNowCheckOrder, int pStop1stOrder, int pPushPos1st, int pPushPos2nd, bool pIsWatchLeft) {
+	// パラメータエラー検証
+	if (pFlagID < 0 || pFlagID >= m_flagMax)				return nullptr;
+	if (pNowCheckOrder < 0 || pNowCheckOrder >= m_reelMax)	return nullptr;
+	if (pStop1stOrder < 0 || pStop1stOrder >= m_reelMax)	return nullptr;
+	if (pPushPos1st < 0 || pPushPos1st >= m_comaMax)		return nullptr;
 
-	if (posData.currentOrder == 0) return nullptr;	// 1st制御(=処理なし)
+	auto& nowMakeData = ctrlData[pFlagID];
+	const auto styleData = Get2ndStyle(pPushPos1st, pFlagID);
+	auto& nowCtrlData = nowMakeData.controlData[pStop1stOrder];
+
+	if (pNowCheckOrder == 0) return nullptr;	// 1st制御(=処理なし)
 	if (styleData == 0x3) {							// 2nd以降 2nd/3rdCom制御
-		const int index = posData.cursorComa[0];
+		const int index = pStop1stOrder;
 		return &(nowCtrlData.controlData2nd.controlDataComSA[index]);
-	} else if (posData.currentOrder == 1) {			// 2nd制御
-		if (styleData == 0x2) {						// 2ndStopAvailable(cursorComa[0]に制限あり)
-			const int index = posData.cursorComa[0];
+	} else if (pNowCheckOrder == 1) {			// 2nd制御
+		if (styleData == 0x2) {						// 2ndStopAvailable(pPush1stが停止可能位置の場合のみindexに有効データあり)
+			const int index = pStop1stOrder;
 			return &(nowCtrlData.controlData2nd.controlData2ndSA[index]);
 		}
 	} else if (posData.currentOrder == 2) {			// 3rd制御(非Com)
-		const int index = posData.cursorComa[0] * m_comaMax + posData.cursorComa[1];
+		const int index = pPushPos1st * m_comaMax + pPushPos2nd;
 		return &(nowCtrlData.controlData3rd.availableData[index]);
 	}
 	return nullptr;
-
 }
+SControlDataSA* CSlotControlManager::GetSA() { return GetSA(posData.currentFlagID); }
+SControlDataSA* CSlotControlManager::GetSA(int pFlagID) { return GetSA(pFlagID, posData.currentOrder, posData.stop1st, posData.cursorComa[0], posData.cursorComa[1], posData.isWatchLeft); }
 
 // [act]停止不能カ所がないか検証・ある場合はm_isSuspendをtrueにする
 void CSlotControlManager::CheckSA() {

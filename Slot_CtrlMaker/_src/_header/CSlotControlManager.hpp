@@ -41,7 +41,9 @@ class CSlotControlManager {
 	unsigned char* GetSS(int pFlagID);
 	unsigned char* GetSS(bool pGet1st);
 
-	SControlDataSA* GetSA(int pFlagID = -1);
+	SControlDataSA* GetSA(int pFlagID, int pNowCheckOrder, int pStop1stOrder, int pPushPos1st, int pPushPos2nd, bool pIsWatchLeft);
+	SControlDataSA* GetSA();
+	SControlDataSA* GetSA(int pFlagID);
 
 	bool SetComaPos(const int pMoveOrder, const bool pIsReset, const bool pIsUp);
 	void SwitchATableType();
