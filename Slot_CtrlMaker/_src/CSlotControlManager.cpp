@@ -365,26 +365,30 @@ SControlAvailableDef* CSlotControlManager::GetDef() {
 }
 
 // [act]現在参照中の該当スベリIDの入った変数ポインタを返す
-unsigned char* CSlotControlManager::GetSS(int pFlagID, bool pGet1st) {
+unsigned char* CSlotControlManager::GetSS(int pFlagID, bool pGet1st, int pStop1stOrder, int pPushPos1st, bool pIsWatchLeft) {
 	const int flagID = pFlagID < 0 ? posData.currentFlagID : pFlagID;
 	if (flagID >= m_flagMax) return nullptr;
+
 	auto& nowMakeData = ctrlData[flagID];
-	const auto styleData = Get2ndStyle(-1, pFlagID);
-	auto& nowCtrlData = nowMakeData.controlData[posData.stop1st];
-	if (posData.currentOrder == 0 || pGet1st) {		// 1st制御
+	auto& nowCtrlData = nowMakeData.controlData[pStop1stOrder];
+
+	if (pGet1st) {		// 1st制御
 		return &nowCtrlData.controlData1st;
-	} else if (posData.currentOrder == 1) {			// 2nd制御
+	} else {			// 2nd制御
+		const auto styleData = Get2ndStyle(pPushPos1st, pFlagID);
+		int index = pPushPos1st + (pIsWatchLeft ? 0 : m_comaMax);
 		if (styleData == 0x0) {						// 2ndPushSlip
-			int index = posData.cursorComa[0] + (posData.isWatchLeft ? 0 : m_comaMax);
 			return &nowCtrlData.controlData2nd.controlData2ndPS[index];
 		}
-		else if (styleData == 0x1) {				// 2ndStopSlip(cursorComa[0]に制限あり)
-			int index = posData.cursorComa[0] + (posData.isWatchLeft ? 0 : m_comaMax);
+		else if (styleData == 0x1) {				// 2ndStopSlip(pPush1stが停止可能位置の場合のみindexに有効データあり)
 			return &nowCtrlData.controlData2nd.controlData2ndSS[index];
 		}
 	}
 	return nullptr;
 }
+unsigned char* CSlotControlManager::GetSS(            ) { return GetSS(posData.currentFlagID, posData.currentOrder == 0, posData.stop1st, posData.cursorComa[0], posData.isWatchLeft); }
+unsigned char* CSlotControlManager::GetSS(int pFlagID ) { return GetSS(pFlagID              , posData.currentOrder == 0, posData.stop1st, posData.cursorComa[0], posData.isWatchLeft); }
+unsigned char* CSlotControlManager::GetSS(bool pGet1st) { return GetSS(posData.currentFlagID, pGet1st                  , posData.stop1st, posData.cursorComa[0], posData.isWatchLeft); }
 
 unsigned char CSlotControlManager::Get2ndStyle(const int pPushPos, const int pFlagID) {
 	const int flagID = pFlagID < 0 ? posData.currentFlagID : pFlagID;
@@ -728,12 +732,12 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 				drawPos[posData.stop1st   * 2    ] = posData.cursorComa[0];
 				drawPos[reelPosByOrder[0] * 2    ] = posData.cursorComa[1];
 				if (Get2ndStyle() == 0x00) {				// PSテーブル
-					const unsigned char *const ss1 = GetSS(-1, true);	// -1:現在選択中のフラグ
-					const unsigned char *const ss2 = GetSS(-1, false);
+					const unsigned char *const ss1 = GetSS(true);	// -1:現在選択中のフラグ
+					const unsigned char *const ss2 = GetSS(false);
 					drawPos[posData.stop1st   * 2 + 1] = GetPosFromSlipT(*ss1, posData.cursorComa[0]);
 					drawPos[reelPosByOrder[0] * 2 + 1] = GetPosFromSlipT(*ss2, posData.cursorComa[1]);
 				} else if (Get2ndStyle() == 0x01) {			// SSテーブル
-					const unsigned char *const ss2 = GetSS(-1, false);
+					const unsigned char *const ss2 = GetSS(false);
 					drawPos[posData.stop1st   * 2 + 1] = posData.cursorComa[0];
 					drawPos[reelPosByOrder[0] * 2 + 1] = GetPosFromSlipT(*ss2, posData.cursorComa[1]);
 				} else {									// SAテーブル

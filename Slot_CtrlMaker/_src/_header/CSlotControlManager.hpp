@@ -31,11 +31,18 @@ class CSlotControlManager {
 	bool Action(int pNewInput);
 	bool ActionTableID(bool pIsUp);
 	void AdjustPos();
-	SControlDataSA* GetSA(int pFlagID = -1);
+
 	void CheckSA();
-	SControlAvailableDef* GetDef();
-	unsigned char* GetSS(int pFlagID = -1, bool pGet1st = false);
 	unsigned char Get2ndStyle(const int pPushPos = -1, const int pFlagID = -1);
+	SControlAvailableDef* GetDef();
+
+	unsigned char* GetSS(int pFlagID, bool pGet1st, int pStop1stOrder, int pPushPos1st, bool pIsWatchLeft);
+	unsigned char* GetSS();
+	unsigned char* GetSS(int pFlagID);
+	unsigned char* GetSS(bool pGet1st);
+
+	SControlDataSA* GetSA(int pFlagID = -1);
+
 	bool SetComaPos(const int pMoveOrder, const bool pIsReset, const bool pIsUp);
 	void SwitchATableType();
 	void SetAvailCtrlPattern(unsigned char pNewFlag);
