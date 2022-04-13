@@ -321,11 +321,11 @@ SControlDataSA* CSlotControlManager::GetSA(int pFlagID, int pNowCheckOrder, int 
 
 	if (pNowCheckOrder == 0) return nullptr;	// 1st制御(=処理なし)
 	if (styleData == 0x3) {							// 2nd以降 2nd/3rdCom制御
-		const int index = pStop1stOrder;
+		const int index = pPushPos1st;
 		return &(nowCtrlData.controlData2nd.controlDataComSA[index]);
 	} else if (pNowCheckOrder == 1) {			// 2nd制御
 		if (styleData == 0x2) {						// 2ndStopAvailable(pPush1stが停止可能位置の場合のみindexに有効データあり)
-			const int index = pStop1stOrder;
+			const int index = pPushPos1st;
 			return &(nowCtrlData.controlData2nd.controlData2ndSA[index]);
 		}
 	} else if (posData.currentOrder == 2) {			// 3rd制御(非Com)
