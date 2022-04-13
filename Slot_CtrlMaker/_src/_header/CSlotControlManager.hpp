@@ -33,8 +33,11 @@ class CSlotControlManager {
 	void AdjustPos();
 
 	void CheckSA();
-	unsigned char Get2ndStyle(const int pPushPos = -1, const int pFlagID = -1);
 	SControlAvailableDef* GetDef();
+
+	unsigned char Get2ndStyle(const int pPushPos, int pStop1stOrder, const int pFlagID);
+	unsigned char Get2ndStyle();
+	unsigned char Get2ndStyle(const int pPushPos, const int pFlagID);
 
 	unsigned char* GetSS(int pFlagID, bool pGet1st, int pStop1stOrder, int pPushPos1st, bool pIsWatchLeft);
 	unsigned char* GetSS();
@@ -45,11 +48,13 @@ class CSlotControlManager {
 	SControlDataSA* GetSA();
 	SControlDataSA* GetSA(int pFlagID);
 
+	bool isSlip(const int pFlagID);
+	bool isSlip();
+
 	bool SetComaPos(const int pMoveOrder, const bool pIsReset, const bool pIsUp);
 	void SwitchATableType();
 	void SetAvailCtrlPattern(unsigned char pNewFlag);
 	void SetAvailShiftConf(unsigned char pNewFlag);
-	bool isSilp(const int pFlagID = -1);
 	bool canChangeTable();
 	bool UpdateActiveFlag();
 	int Get2ndReel(bool pIsLeft);
