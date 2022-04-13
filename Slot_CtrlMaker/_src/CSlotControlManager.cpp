@@ -366,10 +366,12 @@ SControlAvailableDef* CSlotControlManager::GetDef() {
 
 // [act]現在参照中の該当スベリIDの入った変数ポインタを返す
 unsigned char* CSlotControlManager::GetSS(int pFlagID, bool pGet1st, int pStop1stOrder, int pPushPos1st, bool pIsWatchLeft) {
-	const int flagID = pFlagID < 0 ? posData.currentFlagID : pFlagID;
-	if (flagID >= m_flagMax) return nullptr;
+	// パラメータエラー検証
+	if (pFlagID < 0 || pFlagID >= m_flagMax)				return nullptr;
+	if (pStop1stOrder < 0 || pStop1stOrder >= m_reelMax)	return nullptr;
+	if (pPushPos1st < 0 || pPushPos1st >= m_comaMax)		return nullptr;
 
-	auto& nowMakeData = ctrlData[flagID];
+	auto& nowMakeData = ctrlData[pFlagID];
 	auto& nowCtrlData = nowMakeData.controlData[pStop1stOrder];
 
 	if (pGet1st) {		// 1st制御
