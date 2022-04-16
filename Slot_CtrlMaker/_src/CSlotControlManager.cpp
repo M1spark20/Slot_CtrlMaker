@@ -245,10 +245,13 @@ bool CSlotControlManager::GetCanStop(const int pMoveOrder, const int pLookFor, c
 	return true;
 }
 
-int CSlotControlManager::Get2ndReel(bool pIsLeft) {
-	if (pIsLeft)	return posData.stop1st == 0 ? 1 : 0;	// 2nd左側の場合
-	else			return posData.stop1st == 2 ? 1 : 2;	// 2nd右側の場合
+int CSlotControlManager::Get2ndReel(bool pIsLeft, int pStop1stOrder) {
+	if (pStop1stOrder < 0 || pStop1stOrder >= m_reelMax)	return -1;
+
+	if (pIsLeft)	return pStop1stOrder == 0 ? 1 : 0;	// 2nd左側の場合
+	else			return pStop1stOrder == 2 ? 1 : 2;	// 2nd右側の場合
 }
+int CSlotControlManager::Get2ndReel(bool pIsLeft) { return Get2ndReel(pIsLeft, posData.stop1st); }
 
 bool CSlotControlManager::Action(int pNewInput) {
 	bool setAns = true;
@@ -308,7 +311,7 @@ bool CSlotControlManager::ActionTableID(bool pIsUp) {
 	return false;
 }
 
-SControlDataSA* CSlotControlManager::GetSA(int pFlagID, int pNowCheckOrder, int pStop1stOrder, int pPushPos1st, int pPushPos2nd, bool pIsWatchLeft) {
+SControlDataSA* CSlotControlManager::GetSA(int pFlagID, int pNowCheckOrder, int pStop1stOrder, int pPushPos1st, int pPushPos2nd) {
 	// パラメータエラー検証
 	if (pFlagID < 0 || pFlagID >= m_flagMax)				return nullptr;
 	if (pNowCheckOrder < 0 || pNowCheckOrder >= m_reelMax)	return nullptr;
@@ -316,7 +319,7 @@ SControlDataSA* CSlotControlManager::GetSA(int pFlagID, int pNowCheckOrder, int 
 	if (pPushPos1st < 0 || pPushPos1st >= m_comaMax)		return nullptr;
 
 	auto& nowMakeData = ctrlData[pFlagID];
-	const auto styleData = Get2ndStyle(pPushPos1st, pFlagID);
+	const auto styleData = Get2ndStyle(pPushPos1st, pStop1stOrder, pFlagID);
 	auto& nowCtrlData = nowMakeData.controlData[pStop1stOrder];
 
 	if (pNowCheckOrder == 0) return nullptr;	// 1st制御(=処理なし)
@@ -328,14 +331,14 @@ SControlDataSA* CSlotControlManager::GetSA(int pFlagID, int pNowCheckOrder, int 
 			const int index = pPushPos1st;
 			return &(nowCtrlData.controlData2nd.controlData2ndSA[index]);
 		}
-	} else if (posData.currentOrder == 2) {			// 3rd制御(非Com)
+	} else if (pNowCheckOrder == 2) {			// 3rd制御(非Com)
 		const int index = pPushPos1st * m_comaMax + pPushPos2nd;
 		return &(nowCtrlData.controlData3rd.availableData[index]);
 	}
 	return nullptr;
 }
 SControlDataSA* CSlotControlManager::GetSA() { return GetSA(posData.currentFlagID); }
-SControlDataSA* CSlotControlManager::GetSA(int pFlagID) { return GetSA(pFlagID, posData.currentOrder, posData.stop1st, posData.cursorComa[0], posData.cursorComa[1], posData.isWatchLeft); }
+SControlDataSA* CSlotControlManager::GetSA(int pFlagID) { return GetSA(pFlagID, posData.currentOrder, posData.stop1st, posData.cursorComa[0], posData.cursorComa[1]); }
 
 // [act]停止不能カ所がないか検証・ある場合はm_isSuspendをtrueにする
 void CSlotControlManager::CheckSA() {
@@ -399,9 +402,9 @@ unsigned char* CSlotControlManager::GetSS(bool pGet1st) { return GetSS(posData.c
 
 unsigned char CSlotControlManager::Get2ndStyle(const int pPushPos, int pStop1stOrder, const int pFlagID) {
 	// パラメータエラー検証
-	//if (pFlagID < 0 || pFlagID >= m_flagMax)				return 0;
-	//if (pPushPos < 0 || pPushPos >= m_comaMax)				return 0;
-	//if (pStop1stOrder < 0 || pStop1stOrder >= m_reelMax)	return 0;
+	if (pFlagID < 0 || pFlagID >= m_flagMax)				return 0;
+	if (pPushPos < 0 || pPushPos >= m_comaMax)				return 0;
+	if (pStop1stOrder < 0 || pStop1stOrder >= m_reelMax)	return 0;
 
 	const auto& nowMakeData1st = ctrlData[pFlagID];
 	if (((nowMakeData1st.controlStyle >> pStop1stOrder) & 0x1) == 0) return 0x0;
@@ -411,6 +414,20 @@ unsigned char CSlotControlManager::Get2ndStyle(const int pPushPos, int pStop1stO
 }
 unsigned char CSlotControlManager::Get2ndStyle() { return Get2ndStyle(posData.cursorComa[0], posData.currentFlagID); }
 unsigned char CSlotControlManager::Get2ndStyle(const int pPushPos, const int pFlagID) { return Get2ndStyle(pPushPos, posData.stop1st, pFlagID); }
+
+bool CSlotControlManager::isSlip(const int pFlagID, int pCurrentOrder, int pStop1stOrder,  int pPushPos1st) {
+	// パラメータエラー検証
+	if (pFlagID < 0 || pFlagID >= m_flagMax)				return false;
+	if (pCurrentOrder < 0 || pCurrentOrder >= m_reelMax)	return false;
+	if (pStop1stOrder < 0 || pStop1stOrder >= m_reelMax)	return 0;
+	if (pPushPos1st < 0 || pPushPos1st >= m_comaMax)		return false;
+
+	if (pCurrentOrder == 0) return true;
+	if (pCurrentOrder == 2) return false;
+	return !(Get2ndStyle(pPushPos1st, pStop1stOrder, pFlagID) & 0x2);
+}
+bool CSlotControlManager::isSlip() {return isSlip(posData.currentFlagID); }
+bool CSlotControlManager::isSlip(const int pFlagID) {return isSlip(pFlagID, posData.currentOrder, posData.stop1st, posData.cursorComa[0]); }
 
 // [act]制御パターン種別切り替え(1:PS, 2:SS, 3:SA, 4:Com)
 void CSlotControlManager::SetAvailCtrlPattern(unsigned char pNewFlag) {
@@ -569,13 +586,6 @@ SControlAvailableDef CSlotControlManager::SetAvailT(bool& pCHK, const size_t pSr
 	ans.tableFlag = isPrior ? 0x4 : 0x0;
 	return ans;
 }
-
-bool CSlotControlManager::isSlip(const int pFlagID) {
-	if (posData.currentOrder == 0) return true;
-	if (posData.currentOrder == 2) return false;
-	return !(Get2ndStyle(posData.cursorComa[0], pFlagID) & 0x2);
-}
-bool CSlotControlManager::isSlip() {return isSlip(posData.currentFlagID); }
 
 // [act]現在選択中フラグの停止可能位置をアップデートする
 bool CSlotControlManager::UpdateActiveFlag() {
@@ -897,6 +907,10 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 			}
 		}
 	}
+
+	// 制御チェック結果描画
+	DrawStopStatus(pData);
+
 	return true;
 }
 
@@ -980,6 +994,66 @@ bool CSlotControlManager::DrawStopTable(int x, int y, int pFlagID) {
 	return true;
 }
 
+// 20220411追加
+// [act]最大の停止位置レベルと入賞フラグ一覧を表示する
+void CSlotControlManager::DrawStopStatus(SSlotGameDataWrapper& pData) {
+	int maxStopLevel = 0;				// 最大のリーチ目レベル
+	std::set<std::string> flagList;	// 入賞しえるフラグ一覧
+
+	for (int reelC = 0; reelC < m_reelMax; ++reelC) {
+		const auto& ctrl = ctrlData[posData.currentFlagID].controlData[reelC];
+
+		for (int push1st = 0; push1st < m_comaMax; ++push1st) {
+			const int stop1st = GetPosFromSlipT(*GetSS(posData.currentFlagID, true, posData.stop1st, push1st, true), push1st);
+			// 2ndは左側、右側で2回ずつループさせる
+			for (int push2ndCNT = 0; push2ndCNT < m_comaMax * 2; ++push2ndCNT) {
+				bool watchLeft = push2ndCNT >= m_comaMax;
+				const int push2nd = push2ndCNT % m_comaMax;
+				int stop2nd = -1;
+
+				const auto style = Get2ndStyle(stop1st, posData.stop1st, posData.currentFlagID);
+				// SlipT: 渡しpush1st
+				if (style == 0x0) stop2nd = GetPosFromSlipT(*GetSS(posData.currentFlagID, false, posData.stop1st, push1st, watchLeft), push2nd);
+				// SlipT: 渡しstop1st
+				else if (isSlip(posData.currentFlagID, 1, posData.stop1st, stop1st)) stop2nd = GetPosFromSlipT(*GetSS(posData.currentFlagID, false, posData.stop1st, stop1st, watchLeft), push2nd);
+				// AvailT: 渡しstop1st
+				else stop2nd = GetPosFromAvailT(*GetSA(posData.currentFlagID, 1, posData.stop1st, stop1st, push2nd), push2nd, watchLeft);
+
+				for (int push3rd = 0; push3rd < m_comaMax; ++push3rd) {
+					int stop3rd = -1;
+					// ComSA専用
+					if (style == 0x3) stop3rd = GetPosFromAvailT(*GetSA(posData.currentFlagID, 1, posData.stop1st, stop1st, stop2nd), push3rd, !watchLeft);
+					// 汎用
+					else stop3rd = GetPosFromAvailT(*GetSA(posData.currentFlagID, 2, posData.stop1st, stop1st, stop2nd), push3rd, watchLeft);
+
+					// 判定用データ作成
+					std::vector<int> checkPos(m_reelMax);
+					checkPos[posData.stop1st] = stop1st;
+					checkPos[Get2ndReel(watchLeft, posData.stop1st)] = stop2nd;
+					checkPos[Get2ndReel(!watchLeft, posData.stop1st)] = stop3rd;
+					// 位置補正
+					for (size_t i = 0; i < checkPos.size(); ++i)
+						checkPos[i] = (m_comaMax * 2 - checkPos[i] - 3) % m_comaMax;
+
+					// 払い出しデータ取得
+					const auto stopData = pData.reelChecker.GetPosData(posData.stop1st, checkPos);
+					maxStopLevel = stopData.reachLevel > maxStopLevel ? stopData.reachLevel : maxStopLevel;
+					flagList.insert(stopData.spotFlag);
+				}
+			}
+		}
+	}
+
+	// 描画
+	DxLib::DrawFormatString(1010, 100, 0xA0A0FF, "maxReachLv.: %d", maxStopLevel);
+	int drawC = 0;
+	for (auto& val : flagList) {
+		DxLib::DrawString(1010 + 30 * drawC, 115, (val == "" ? "-" : val.c_str()), 0xA0A0FF);
+		++drawC;
+	}
+
+	return;
+}
 
 bool CSlotControlManager::ReadRestore(CRestoreManagerRead& pReader) {
 	size_t sizeTemp = 0;

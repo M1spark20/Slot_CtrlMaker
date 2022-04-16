@@ -44,12 +44,16 @@ class CSlotControlManager {
 	unsigned char* GetSS(int pFlagID);
 	unsigned char* GetSS(bool pGet1st);
 
-	SControlDataSA* GetSA(int pFlagID, int pNowCheckOrder, int pStop1stOrder, int pPushPos1st, int pPushPos2nd, bool pIsWatchLeft);
+	SControlDataSA* GetSA(int pFlagID, int pNowCheckOrder, int pStop1stOrder, int pPushPos1st, int pPushPos2nd);
 	SControlDataSA* GetSA();
 	SControlDataSA* GetSA(int pFlagID);
 
-	bool isSlip(const int pFlagID);
+	bool isSlip(const int pFlagID, int pCurrentOrder, int pStop1stOrder, int pPushPos1st);
 	bool isSlip();
+	bool isSlip(const int pFlagID);
+
+	int Get2ndReel(bool pIsLeft, int pStop1stOrder);
+	int Get2ndReel(bool pIsLeft);
 
 	bool SetComaPos(const int pMoveOrder, const bool pIsReset, const bool pIsUp);
 	void SwitchATableType();
@@ -57,7 +61,6 @@ class CSlotControlManager {
 	void SetAvailShiftConf(unsigned char pNewFlag);
 	bool canChangeTable();
 	bool UpdateActiveFlag();
-	int Get2ndReel(bool pIsLeft);
 	unsigned long long GetAvailDefData(const int pAvailIndex, const unsigned char pTableFlag);
 	unsigned long long GetAvailShiftData(unsigned long long pData, const unsigned char pShiftFlag);
 	unsigned long long GetAvailShiftData(const SControlDataSA& pSAData, const int pIndex, bool pIsLeft);
@@ -74,6 +77,8 @@ class CSlotControlManager {
 	bool DrawComaBox(int x, int y, const unsigned int pStopPos, int pLightPos, int boxColor = 0x404040);
 	bool DrawSlipTable(int x, int y, int pFlagID, SSlotGameDataWrapper& pData);
 	bool DrawStopTable(int x, int y, int pFlagID);
+
+	void DrawStopStatus(SSlotGameDataWrapper& pData);	// 20220411add åªç›ÉtÉâÉOÇÃí‚é~à íuèÓïÒÇï`âÊÇ∑ÇÈ
 
 public:
 	bool Init(const SSlotGameDataWrapper& pData);
