@@ -998,6 +998,7 @@ bool CSlotControlManager::DrawStopTable(int x, int y, int pFlagID) {
 // [act]最大の停止位置レベルと入賞フラグ一覧を表示する
 void CSlotControlManager::DrawStopStatus(SSlotGameDataWrapper& pData) {
 	int maxStopLevel = 0;				// 最大のリーチ目レベル
+	std::vector<int> maxPos(m_reelMax), maxTemp(m_reelMax);
 	std::set<std::string> flagList;	// 入賞しえるフラグ一覧
 
 	for (int reelC = 0; reelC < m_reelMax; ++reelC) {
@@ -1029,23 +1030,27 @@ void CSlotControlManager::DrawStopStatus(SSlotGameDataWrapper& pData) {
 					// 判定用データ作成
 					std::vector<int> checkPos(m_reelMax);
 					checkPos[posData.stop1st] = stop1st;
-					checkPos[Get2ndReel(watchLeft, posData.stop1st)] = stop2nd;
+					checkPos[Get2ndReel(watchLeft, posData.stop1st)] = stop2nd % m_comaMax;
 					checkPos[Get2ndReel(!watchLeft, posData.stop1st)] = stop3rd;
+					maxTemp = checkPos;
 					// 位置補正
 					for (size_t i = 0; i < checkPos.size(); ++i)
 						checkPos[i] = (m_comaMax * 2 - checkPos[i] - 3) % m_comaMax;
 
 					// 払い出しデータ取得
 					const auto stopData = pData.reelChecker.GetPosData(posData.stop1st, checkPos);
-					maxStopLevel = stopData.reachLevel > maxStopLevel ? stopData.reachLevel : maxStopLevel;
+					if (stopData.reachLevel > maxStopLevel) {
+						maxStopLevel = stopData.reachLevel;
+						maxPos = maxTemp;
+					}
 					flagList.insert(stopData.spotFlag);
 				}
 			}
 		}
 	}
 
-	// 描画
-	DxLib::DrawFormatString(1010, 100, 0xA0A0FF, "maxReachLv.: %d", maxStopLevel);
+	// 描画(+1するのは画面上の描画が+1だから)
+	DxLib::DrawFormatString(1010, 100, 0xA0A0FF, "maxReachLv.: %d (%02d-%02d-%02d)", maxStopLevel, maxPos[0] + 1, maxPos[1] + 1, maxPos[2] + 1);
 	int drawC = 0;
 	for (auto& val : flagList) {
 		DxLib::DrawString(1010 + 30 * drawC, 115, (val == "" ? "-" : val.c_str()), 0xA0A0FF);
