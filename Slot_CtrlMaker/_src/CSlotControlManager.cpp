@@ -896,12 +896,12 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 					if (sa == nullptr) return false;
 					DxLib::DrawString(1010, 80, "AvailT :", 0xF0F0FF);
 					for (int i = 0; i < AVAIL_ID_MAX; ++i) {
-						const int index = i + (posData.isWatchLeft ? 0 : AVAIL_ID_MAX);
+						const int saWatch = i + (posData.isWatchLeft ? 0 : AVAIL_ID_MAX);
 						const std::string shiftType[] = {"D", "u", "d", "s"};
 						const std::string invPriorType[] = {"  ", " P", "I ", "IP"};
-						const auto& type = sa->data[i].tableFlag;
+						const auto& type = sa->data[saWatch].tableFlag;
 						const std::string typeStr = shiftType[type & 0x3] + invPriorType[(type >> 2) & 0x3];
-						DxLib::DrawFormatString(1090 + i*63, 80, 0xF0F0FF, "%3d%s", sa->data[i].availableID, typeStr.c_str());
+						DxLib::DrawFormatString(1090 + i*63, 80, 0xF0F0FF, "%3d%s", sa->data[saWatch].availableID, typeStr.c_str());
 					}
 				}
 			}
