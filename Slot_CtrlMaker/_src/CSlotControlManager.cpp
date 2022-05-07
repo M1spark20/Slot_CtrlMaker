@@ -619,7 +619,14 @@ bool CSlotControlManager::UpdateActiveFlag() {
 					return true;
 				}
 			} else if (useTable2nd == 0x3) {
-				// 何もしない
+				// 何もしない -> 20220507:反対側の停止可能位置にactiveFlagをコピー
+				const int ref2nd = pushPos % m_comaMax;
+				active2nd = GetActiveFromAvailT(ctrlIt->controlData2nd.controlData2ndSA[ref2nd], !lrFlag);
+				// 引込不可時無効データ -> activeデータクリアして終了
+				if (active2nd == 0) {
+					ctrlIt->controlData3rd.activeFlag2nd[pushPos % m_comaMax] = 0;
+					return true;
+				}
 			} else {
 				return false;
 			}
