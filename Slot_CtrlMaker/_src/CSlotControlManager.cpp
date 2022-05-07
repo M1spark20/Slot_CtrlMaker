@@ -902,8 +902,13 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 					SControlDataSA* sa = GetSA(index);
 					if (sa == nullptr) return false;
 					DxLib::DrawString(1010, 80, "AvailT :", 0xF0F0FF);
+
+					// 20220507: 選択中データがComSAかつcurrentOrder=2ならwatchLeft反転
+					const bool watchLeft = (Get2ndStyle(posData.cursorComa[0], index) == 0x3 && posData.currentOrder == 2) ?
+						!posData.isWatchLeft : posData.isWatchLeft;
+
 					for (int i = 0; i < AVAIL_ID_MAX; ++i) {
-						const int saWatch = i + (posData.isWatchLeft ? 0 : AVAIL_ID_MAX);
+						const int saWatch = i + (watchLeft ? 0 : AVAIL_ID_MAX);
 						const std::string shiftType[] = {"D", "u", "d", "s"};
 						const std::string invPriorType[] = {"  ", " P", "I ", "IP"};
 						const auto& type = sa->data[saWatch].tableFlag;
@@ -957,12 +962,17 @@ bool CSlotControlManager::DrawSlipTable(int x, int y, int pFlagID, SSlotGameData
 	} else {
 		SControlDataSA* sa = GetSA(pFlagID);
 		if(sa == nullptr) return false;
-		const unsigned int stopFlag = m_isSuspend ? 0 : GetActiveFromAvailT(*sa, posData.isWatchLeft);
+
+		// ComSAでcurrentOrder=2の時は表示データを反転させる
+		const bool watchLeft = (Get2ndStyle(posData.cursorComa[0], pFlagID)==0x3 && posData.currentOrder == 2) ?
+			!posData.isWatchLeft : posData.isWatchLeft;
+
+		const unsigned int stopFlag = m_isSuspend ? 0 : GetActiveFromAvailT(*sa, watchLeft);
 		DrawComaBox(x-3, y-6, stopFlag, posData.cursorComa[highLightPos]);
 		for (int i = 0; i < m_comaMax; ++i) {
 			const int posY = y + BOX_H * (m_comaMax - i - 1);
 			if (!m_isSuspend) {
-				int stopPos = GetPosFromAvailT(*sa, i, posData.isWatchLeft);
+				int stopPos = GetPosFromAvailT(*sa, i, watchLeft);
 				int showVal = ((stopPos + m_comaMax) - i) % m_comaMax;
 				DxLib::DrawFormatString(x, posY, color, "%d", showVal);
 			} else {
