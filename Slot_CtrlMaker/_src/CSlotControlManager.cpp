@@ -279,6 +279,9 @@ bool CSlotControlManager::Action(int pNewInput) {
 bool CSlotControlManager::ActionTableID(bool pIsUp) {
 	auto refData = GetDef();
 	if (refData != nullptr) {	// SAテーブル
+		// 20220507: sptデータなら入力を無視する(return true)
+		if ((refData->tableFlag & 0x3) == 0x3) return true;
+
 		int startID = refData->availableID + AVAIL_TABLE_MAX;
 		for (int offset = 1; offset <= AVAIL_TABLE_MAX; ++offset) {
 			const auto srcID = startID % AVAIL_TABLE_MAX;
@@ -289,6 +292,7 @@ bool CSlotControlManager::ActionTableID(bool pIsUp) {
 			--tableAvailable[srcID].refNum;
 			++tableAvailable[newID].refNum;
 			m_refreshFlag = true;
+			refData->tableFlag |= 0x4;	// 20220508: priorityを強制的に有効にする(バグ対策)
 			return UpdateActiveFlag();
 		}
 		return false;
