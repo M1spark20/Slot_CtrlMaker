@@ -1041,6 +1041,9 @@ void CSlotControlManager::DrawStopStatus(SSlotGameDataWrapper& pData) {
 				// AvailT: “n‚µstop1st
 				else stop2nd = GetPosFromAvailT(*GetSA(posData.currentFlagID, 1, posData.stop1st, stop1st, push2nd), push2nd, watchLeft);
 
+				// ƒGƒ‰[ˆ—(b’è)
+				if (stop2nd == -1) return;
+
 				for (int push3rd = 0; push3rd < m_comaMax; ++push3rd) {
 					int stop3rd = -1;
 					// ComSAê—p
