@@ -1022,55 +1022,52 @@ void CSlotControlManager::DrawStopStatus(SSlotGameDataWrapper& pData) {
 	std::vector<int> maxPos(m_reelMax), maxTemp(m_reelMax);
 	std::set<std::string> flagList;	// 入賞しえるフラグ一覧
 
-	for (int reelC = 0; reelC < m_reelMax; ++reelC) {
-		const auto& ctrl = ctrlData[posData.currentFlagID].controlData[reelC];
 
-		for (int push1st = 0; push1st < m_comaMax; ++push1st) {
-			const int stop1st = GetPosFromSlipT(*GetSS(posData.currentFlagID, true, posData.stop1st, push1st, true), push1st);
-			// 2ndは左側、右側で2回ずつループさせる
-			for (int push2ndCNT = 0; push2ndCNT < m_comaMax * 2; ++push2ndCNT) {
-				bool watchLeft = push2ndCNT >= m_comaMax;
-				const int push2nd = push2ndCNT % m_comaMax;
-				int stop2nd = -1;
+	for (int push1st = 0; push1st < m_comaMax; ++push1st) {
+		const int stop1st = GetPosFromSlipT(*GetSS(posData.currentFlagID, true, posData.stop1st, push1st, true), push1st);
+		// 2ndは左側、右側で2回ずつループさせる
+		for (int push2ndCNT = 0; push2ndCNT < m_comaMax * 2; ++push2ndCNT) {
+			bool watchLeft = push2ndCNT >= m_comaMax;
+			const int push2nd = push2ndCNT % m_comaMax;
+			int stop2nd = -1;
 
-				const auto style = Get2ndStyle(stop1st, posData.stop1st, posData.currentFlagID);
-				// SlipT: 渡しpush1st
-				if (style == 0x0) stop2nd = GetPosFromSlipT(*GetSS(posData.currentFlagID, false, posData.stop1st, push1st, watchLeft), push2nd);
-				// SlipT: 渡しstop1st
-				else if (isSlip(posData.currentFlagID, 1, posData.stop1st, stop1st)) stop2nd = GetPosFromSlipT(*GetSS(posData.currentFlagID, false, posData.stop1st, stop1st, watchLeft), push2nd);
-				// AvailT: 渡しstop1st
-				else stop2nd = GetPosFromAvailT(*GetSA(posData.currentFlagID, 1, posData.stop1st, stop1st, push2nd), push2nd, watchLeft);
+			const auto style = Get2ndStyle(stop1st, posData.stop1st, posData.currentFlagID);
+			// SlipT: 渡しpush1st
+			if (style == 0x0) stop2nd = GetPosFromSlipT(*GetSS(posData.currentFlagID, false, posData.stop1st, push1st, watchLeft), push2nd);
+			// SlipT: 渡しstop1st
+			else if (isSlip(posData.currentFlagID, 1, posData.stop1st, stop1st)) stop2nd = GetPosFromSlipT(*GetSS(posData.currentFlagID, false, posData.stop1st, stop1st, watchLeft), push2nd);
+			// AvailT: 渡しstop1st
+			else stop2nd = GetPosFromAvailT(*GetSA(posData.currentFlagID, 1, posData.stop1st, stop1st, push2nd), push2nd, watchLeft);
 
-				// エラー処理(暫定)
-				if (stop2nd == -1) return;
+			// エラー処理(暫定)
+			if (stop2nd == -1) return;
 
-				for (int push3rd = 0; push3rd < m_comaMax; ++push3rd) {
-					int stop3rd = -1;
-					// ComSA専用
-					if (style == 0x3) stop3rd = GetPosFromAvailT(*GetSA(posData.currentFlagID, 1, posData.stop1st, stop1st, stop2nd), push3rd, !watchLeft);
-					// 汎用
-					else stop3rd = GetPosFromAvailT(*GetSA(posData.currentFlagID, 2, posData.stop1st, stop1st, stop2nd), push3rd, watchLeft);
+			for (int push3rd = 0; push3rd < m_comaMax; ++push3rd) {
+				int stop3rd = -1;
+				// ComSA専用
+				if (style == 0x3) stop3rd = GetPosFromAvailT(*GetSA(posData.currentFlagID, 1, posData.stop1st, stop1st, stop2nd), push3rd, !watchLeft);
+				// 汎用
+				else stop3rd = GetPosFromAvailT(*GetSA(posData.currentFlagID, 2, posData.stop1st, stop1st, stop2nd), push3rd, watchLeft);
 
-					// 判定用データ作成
-					std::vector<int> checkPos(m_reelMax);
-					checkPos[posData.stop1st] = stop1st;
-					checkPos[Get2ndReel(watchLeft, posData.stop1st)] = stop2nd % m_comaMax;
-					checkPos[Get2ndReel(!watchLeft, posData.stop1st)] = stop3rd;
-					maxTemp = checkPos;
-					// 位置補正
-					for (size_t i = 0; i < checkPos.size(); ++i)
-						checkPos[i] = (m_comaMax * 2 - checkPos[i] - 3) % m_comaMax;
+				// 判定用データ作成
+				std::vector<int> checkPos(m_reelMax);
+				checkPos[posData.stop1st] = stop1st;
+				checkPos[Get2ndReel(watchLeft, posData.stop1st)] = stop2nd % m_comaMax;
+				checkPos[Get2ndReel(!watchLeft, posData.stop1st)] = stop3rd;
+				maxTemp = checkPos;
+				// 位置補正
+				for (size_t i = 0; i < checkPos.size(); ++i)
+					checkPos[i] = (m_comaMax * 2 - checkPos[i] - 3) % m_comaMax;
 
-					// 払い出しデータ取得
-					const auto stopData = pData.reelChecker.GetPosData(posData.stop1st, checkPos);
-					if (stopData.reachLevel > maxStopLevel) {
-						maxStopLevel = stopData.reachLevel;
-						maxPos = maxTemp;
-					}
-					flagList.insert(stopData.spotFlag);
-					// 3rd引き込みチェック
-					CheckPull(pData, posData.stop1st, false, push2nd, stop2nd, stop1st);
+				// 払い出しデータ取得
+				const auto stopData = pData.reelChecker.GetPosData(posData.stop1st, checkPos);
+				if (stopData.reachLevel > maxStopLevel) {
+					maxStopLevel = stopData.reachLevel;
+					maxPos = maxTemp;
 				}
+				flagList.insert(stopData.spotFlag);
+				// 3rd引き込みチェック
+				CheckPull(pData, posData.stop1st, false, push2nd, stop2nd, stop1st);
 			}
 		}
 	}
