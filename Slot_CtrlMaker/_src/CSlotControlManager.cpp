@@ -1067,9 +1067,13 @@ void CSlotControlManager::DrawStopStatus(SSlotGameDataWrapper& pData) {
 				}
 				flagList.insert(stopData.spotFlag);
 				// 3rd引き込みチェック
-				CheckPull(pData, posData.stop1st, false, push2nd, stop2nd, stop1st);
+				CheckPull(pData, posData.stop1st, watchLeft, push3rd, stop3rd, stop1st, stop2nd);
 			}
+			// 2nd引き込みチェック
+			CheckPull(pData, posData.stop1st, watchLeft, push2nd, stop2nd, stop1st);
 		}
+		// 1st引き込みチェック
+		CheckPull(pData, posData.stop1st, true, push1st, stop1st);
 	}
 
 	// 描画(+1するのは画面上の描画が+1だから)
