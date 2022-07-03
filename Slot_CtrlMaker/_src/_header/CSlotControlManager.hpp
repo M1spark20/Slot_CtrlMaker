@@ -79,6 +79,7 @@ class CSlotControlManager {
 	bool DrawStopTable(int x, int y, int pFlagID);
 
 	void DrawStopStatus(SSlotGameDataWrapper& pData);	// 20220411add Œ»İƒtƒ‰ƒO‚Ì’â~ˆÊ’uî•ñ‚ğ•`‰æ‚·‚é
+	bool CheckPull(SSlotGameDataWrapper& pData, int order1st, bool watchLeft, int pushPos, int stopPos, int stop1st=-1, int stop2nd=-1);
 
 public:
 	bool Init(const SSlotGameDataWrapper& pData);

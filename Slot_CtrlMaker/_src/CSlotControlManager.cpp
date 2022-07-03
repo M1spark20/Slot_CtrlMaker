@@ -1068,6 +1068,8 @@ void CSlotControlManager::DrawStopStatus(SSlotGameDataWrapper& pData) {
 						maxPos = maxTemp;
 					}
 					flagList.insert(stopData.spotFlag);
+					// 3rd引き込みチェック
+					CheckPull(pData, posData.stop1st, false, push2nd, stop2nd, stop1st);
 				}
 			}
 		}
@@ -1082,6 +1084,49 @@ void CSlotControlManager::DrawStopStatus(SSlotGameDataWrapper& pData) {
 	}
 
 	return;
+}
+
+// [act]引き込みチェックを実施する
+bool CSlotControlManager::CheckPull(SSlotGameDataWrapper& pData, int order1st, bool watchLeft, int pushPos, int stopPos, int stop1st, int stop2nd) {
+	// 検証結果格納データ
+	std::vector<std::set<std::string>> flagList(5);
+
+	// すべりコマ数確認
+	const int slipCount = abs((pushPos + m_comaMax) - (stopPos + m_comaMax)) % m_comaMax;
+
+	// 1st,2ndの場合は回転中リールを全取得する(以下でループ数と開始位置を設定する)
+	int loopMax[] = { 1, 1, 5 };
+	int startPos[] = { stop1st, stop2nd, pushPos };
+	int targetOrder = m_reelMax - 1;
+	if (stop1st == -1) {
+		targetOrder = 0;
+		loopMax[0] = 5; loopMax[1] = m_comaMax; loopMax[2] = m_comaMax;
+		startPos[0] = pushPos; startPos[1] = 0; startPos[2] = 0;
+	} else if (stop2nd == -1) {
+		targetOrder = 1;
+		loopMax[1] = 5; loopMax[2] = m_comaMax;
+		startPos[1] = pushPos; startPos[2] = 0;
+	}
+
+	// ループカウンタ定義
+	std::vector<int> lp(m_reelMax);
+	// すべりコマ数分だけ入賞役を取得する
+	for (lp[0] = 0; lp[0] < loopMax[0]; ++lp[0])
+	for (lp[1] = 0; lp[1] < loopMax[1]; ++lp[1])
+	for (lp[2] = 0; lp[2] < loopMax[2]; ++lp[2]) {
+		std::vector<int> checkPos(m_reelMax);
+		checkPos[order1st] = startPos[0] + lp[0];
+		checkPos[Get2ndReel(watchLeft, order1st)] = startPos[1] + lp[1];
+		checkPos[Get2ndReel(!watchLeft, order1st)] = startPos[2] + lp[2];
+		// 位置補正
+		for (size_t i = 0; i < checkPos.size(); ++i)
+			checkPos[i] = (m_comaMax * 2 - checkPos[i] - 3) % m_comaMax;
+		// 払い出しデータ取得
+		const auto stopData = pData.reelChecker.GetPosData(order1st, checkPos);
+		flagList[lp[targetOrder]].insert(stopData.spotFlag);
+	}
+
+	return true;
 }
 
 bool CSlotControlManager::ReadRestore(CRestoreManagerRead& pReader) {
