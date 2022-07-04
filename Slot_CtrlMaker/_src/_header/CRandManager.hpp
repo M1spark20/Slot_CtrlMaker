@@ -15,6 +15,8 @@ public:
 	std::string	GetFlagName(int pFlagID) const;
 	std::string	GetBonusName(int pFlagID) const;
 	void		SetRandSeed(long pRandSeed);
+	int			GetFlagPriority(int pFlagID, std::string pFlagName) const;
+	bool		GetonlyCheckFirst(int pFlagID) const;
 	//bool		Role(CSlotInternalDataManager& pData);
 	bool		GetBetAvailable(int pGameMode, int pBetNum) const;
 	int			GetMaxBetNum(int pGameMode) const;

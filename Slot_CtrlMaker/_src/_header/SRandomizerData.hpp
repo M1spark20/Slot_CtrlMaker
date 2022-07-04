@@ -16,6 +16,8 @@ struct SFlagTable {
 	int dataID;
 	int reachCheckFlag;
 	std::string flagName, bonusName;
+	std::vector<std::string> launchData;
+	bool onlyCheckFirst;
 };
 
 struct SRandTable{

@@ -34,6 +34,15 @@ bool CRandomizerReaderFromCSV::MakeData(SRandomizerData& p_Data){
 			StrToNum(flagTable.reachCheckFlag,	NowGetStr.at(4));
 			flagTable.flagName = NowGetStr.at(5);
 			flagTable.bonusName = NowGetStr.at(6);
+
+			int launchMax;
+			StrToNum(launchMax,					NowGetStr.at(7));
+			flagTable.onlyCheckFirst = (launchMax < 0);
+			launchMax = abs(launchMax);
+			flagTable.launchData.resize(launchMax);
+			for (int i = 0; i < launchMax; ++i)
+				flagTable.launchData[i] = NowGetStr.at(8 + i);
+
 			p_Data.flagType.push_back(flagTable);
 		} else if(NowGetStr.at(0) == "T") {
 			SRandTable newData;

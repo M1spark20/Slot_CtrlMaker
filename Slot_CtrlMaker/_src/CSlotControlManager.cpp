@@ -1093,7 +1093,8 @@ bool CSlotControlManager::CheckPull(SSlotGameDataWrapper& pData, int order1st, b
 	std::vector<std::set<std::string>> flagList(5);
 
 	// すべりコマ数確認
-	const int slipCount = abs((pushPos + m_comaMax) - (stopPos + m_comaMax)) % m_comaMax;
+	int slipCount = stopPos - pushPos;
+	while (slipCount < 0) slipCount += m_comaMax;
 
 	// 1st,2ndの場合は回転中リールを全取得する(以下でループ数と開始位置を設定する)
 	int loopMax[] = { 1, 1, 5 };
@@ -1127,7 +1128,21 @@ bool CSlotControlManager::CheckPull(SSlotGameDataWrapper& pData, int order1st, b
 		flagList[lp[targetOrder]].insert(stopData.spotFlag);
 	}
 
-	return true;
+	std::vector<unsigned char> prior(flagList.size(), 0);
+	for (size_t i = 0; i < flagList.size(); ++i) {
+		const auto& setList = flagList[i];
+		for (const auto& val : setList) {
+			const int level = pData.randManager.GetFlagPriority(posData.currentFlagID, val);
+			if (level < 0) continue;
+			if (pData.randManager.GetonlyCheckFirst(posData.currentFlagID)) {
+				prior[i] = (std::max)((int)prior[i], 1 << (7 - level));
+			} else {
+				prior[i] |= (1 << (7 - level));
+			}
+		}
+	}
+
+	return prior[slipCount] == *std::max_element(prior.begin(), prior.end());
 }
 
 bool CSlotControlManager::ReadRestore(CRestoreManagerRead& pReader) {

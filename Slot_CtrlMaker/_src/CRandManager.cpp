@@ -49,6 +49,21 @@ void CRandManager::SetRandSeed(long pRandSeed){
 	}
 }
 
+int CRandManager::GetFlagPriority(int pFlagID, std::string pFlagName) const {
+	if (pFlagID < 0 || pFlagID >= GetFlagNum()) return -1;
+	const auto& flagList = m_flagData.flagType[pFlagID].launchData;
+	for (const auto& check : flagList) {
+		if (pFlagName != check.substr(1)) continue;
+		return check[0] - '0';
+	}
+	return -1;
+}
+
+bool CRandManager::GetonlyCheckFirst(int pFlagID) const {
+	if (pFlagID < 0 || pFlagID >= GetFlagNum()) return false;
+	return m_flagData.flagType[pFlagID].onlyCheckFirst;
+}
+
 // [act]フラグを抽選により決定する。結果はpDataの値変更による。
 //		なお強制フラグは本クラスを通さずに直接指定が可能。
 // [ret]抽選に成功したか
