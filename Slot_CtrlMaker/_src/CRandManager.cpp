@@ -49,12 +49,14 @@ void CRandManager::SetRandSeed(long pRandSeed){
 	}
 }
 
-int CRandManager::GetFlagPriority(int pFlagID, std::string pFlagName) const {
+int CRandManager::GetFlagPriority(int pFlagID, std::string pFlagName, bool pRetDefineOrder) const {
 	if (pFlagID < 0 || pFlagID >= GetFlagNum()) return -1;
 	const auto& flagList = m_flagData.flagType[pFlagID].launchData;
+	int loopCnt = -1;
 	for (const auto& check : flagList) {
+		++loopCnt;
 		if (pFlagName != check.substr(1)) continue;
-		return check[0] - '0';
+		return pRetDefineOrder ? loopCnt : check[0] - '0';
 	}
 	return -1;
 }

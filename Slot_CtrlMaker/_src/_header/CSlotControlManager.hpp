@@ -1,6 +1,7 @@
 #pragma once
 #include "SControlMakeData.hpp"
 #include "SControlPositionData.hpp"
+#include <string>
 struct SSlotGameDataWrapper;
 class CGameDataManage;
 class CRestoreManagerRead;
@@ -21,6 +22,7 @@ class CSlotControlManager {
 	unsigned long long m_allStopFlag;
 	bool m_isSuspend;					// SAで無効データがある場合trueにして編集対象をロックする
 	bool m_refreshFlag;
+	bool m_checkLaunchFlag;
 
 	std::vector<SControlMakeData>	ctrlData;
 	std::vector<SControlTable>		tableSlip;
@@ -79,7 +81,7 @@ class CSlotControlManager {
 	bool DrawStopTable(int x, int y, int pFlagID);
 
 	void DrawStopStatus(SSlotGameDataWrapper& pData);	// 20220411add 現在フラグの停止位置情報を描画する
-	bool CheckPull(SSlotGameDataWrapper& pData, int order1st, bool watchLeft, int pushPos, int stopPos, int stop1st=-1, int stop2nd=-1);
+	std::string CheckPull(SSlotGameDataWrapper& pData, int order1st, bool watchLeft, int pushPos, int stopPos, int stop1st=-1, int stop2nd=-1);
 
 public:
 	bool Init(const SSlotGameDataWrapper& pData);

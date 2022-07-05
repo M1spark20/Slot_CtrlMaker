@@ -13,6 +13,7 @@ bool CSlotControlManager::Init(const SSlotGameDataWrapper& pData) {
 	m_allStopFlag = (unsigned long long)pow(2, pData.reelManager.GetCharaNum()) - 1ull;
 	m_isSuspend = false;
 	m_refreshFlag = false;
+	m_checkLaunchFlag = false;
 
 	/* slipT初期化 */ {
 		const unsigned long long allStopFlag = m_allStopFlag;
@@ -130,6 +131,9 @@ bool CSlotControlManager::Process() {
 			for (int i = 0; i < 10; ++i) ActionTableID(false);
 		}
 		AdjustPos();
+
+		// 引き込みチェック表示設定：X押しっぱなしで表示
+		m_checkLaunchFlag = (key.ExportKeyStateFrame(KEY_INPUT_X) >= 1);
 	}
 	return true;
 }
@@ -1021,7 +1025,7 @@ void CSlotControlManager::DrawStopStatus(SSlotGameDataWrapper& pData) {
 	int maxStopLevel = 0;				// 最大のリーチ目レベル
 	std::vector<int> maxPos(m_reelMax), maxTemp(m_reelMax);
 	std::set<std::string> flagList;	// 入賞しえるフラグ一覧
-
+	std::string pullFail = "";		// 引き込みNG箇所(""で引込正常)
 
 	for (int push1st = 0; push1st < m_comaMax; ++push1st) {
 		const int stop1st = GetPosFromSlipT(*GetSS(posData.currentFlagID, true, posData.stop1st, push1st, true), push1st);
@@ -1067,13 +1071,14 @@ void CSlotControlManager::DrawStopStatus(SSlotGameDataWrapper& pData) {
 				}
 				flagList.insert(stopData.spotFlag);
 				// 3rd引き込みチェック
-				CheckPull(pData, posData.stop1st, watchLeft, push3rd, stop3rd, stop1st, stop2nd);
+				if (pullFail=="") pullFail = CheckPull(pData, posData.stop1st, watchLeft, push3rd, stop3rd, stop1st, stop2nd);
+				
 			}
 			// 2nd引き込みチェック
-			CheckPull(pData, posData.stop1st, watchLeft, push2nd, stop2nd, stop1st);
+			if (pullFail == "") pullFail = CheckPull(pData, posData.stop1st, watchLeft, push2nd, stop2nd, stop1st);
 		}
 		// 1st引き込みチェック
-		CheckPull(pData, posData.stop1st, true, push1st, stop1st);
+		if (pullFail == "") pullFail = CheckPull(pData, posData.stop1st, true, push1st, stop1st);
 	}
 
 	// 描画(+1するのは画面上の描画が+1だから)
@@ -1084,11 +1089,19 @@ void CSlotControlManager::DrawStopStatus(SSlotGameDataWrapper& pData) {
 		++drawC;
 	}
 
+	if(m_checkLaunchFlag)
+		DxLib::DrawString(1010 + 30 * drawC, 115, (pullFail == "" ? "OK!" : pullFail.c_str()), 0xA0A0FF);
+
 	return;
 }
 
 // [act]引き込みチェックを実施する
-bool CSlotControlManager::CheckPull(SSlotGameDataWrapper& pData, int order1st, bool watchLeft, int pushPos, int stopPos, int stop1st, int stop2nd) {
+// [ret]"":正常
+//		それ以外：エラー発見位置
+std::string CSlotControlManager::CheckPull(SSlotGameDataWrapper& pData, int order1st, bool watchLeft, int pushPos, int stopPos, int stop1st, int stop2nd) {
+	// 処理スキップ？
+	if (!m_checkLaunchFlag) return "";
+
 	// 検証結果格納データ
 	std::vector<std::set<std::string>> flagList(5);
 
@@ -1132,7 +1145,7 @@ bool CSlotControlManager::CheckPull(SSlotGameDataWrapper& pData, int order1st, b
 	for (size_t i = 0; i < flagList.size(); ++i) {
 		const auto& setList = flagList[i];
 		for (const auto& val : setList) {
-			const int level = pData.randManager.GetFlagPriority(posData.currentFlagID, val);
+			const int level = pData.randManager.GetFlagPriority(posData.currentFlagID, val, loopMax[2] == 5);
 			if (level < 0) continue;
 			if (pData.randManager.GetonlyCheckFirst(posData.currentFlagID)) {
 				prior[i] = (std::max)((int)prior[i], 1 << (7 - level));
@@ -1142,7 +1155,17 @@ bool CSlotControlManager::CheckPull(SSlotGameDataWrapper& pData, int order1st, b
 		}
 	}
 
-	return prior[slipCount] == *std::max_element(prior.begin(), prior.end());
+	// OK判定
+	if (prior[slipCount] == *std::max_element(prior.begin(), prior.end())) return "";
+	
+	// NG時処理
+	std::string ans("---L");
+	ans[order1st]							= loopMax[0] >= m_comaMax ? '-' : '0' + startPos[0];
+	ans[Get2ndReel(watchLeft, order1st)]	= loopMax[1] >= m_comaMax ? '-' : '0' + startPos[1];
+	ans[Get2ndReel(!watchLeft, order1st)]	= loopMax[2] >= m_comaMax ? '-' : '0' + startPos[2];
+	for (int i = 0; i < 3; ++i) ans[i] = ans[i] > '9' ? (ans[i] + 7) : ans[i];
+	ans[3] = watchLeft ? 'L' : 'R';
+	return ans;
 }
 
 bool CSlotControlManager::ReadRestore(CRestoreManagerRead& pReader) {
