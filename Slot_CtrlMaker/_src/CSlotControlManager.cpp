@@ -175,7 +175,7 @@ void CSlotControlManager::AdjustPos() {
 
 	// 20220408add subFlagPosà íuèCê≥
 	if (posData.subFlagList.empty()) {
-		posData.selectReel = 0;
+		posData.subFlagPos = 0;
 	} else {
 		while (posData.subFlagPos < 0) posData.subFlagPos = 0;
 		while (posData.subFlagPos >= (int)posData.subFlagList.size()) posData.subFlagPos = posData.subFlagList.size() - 1;
