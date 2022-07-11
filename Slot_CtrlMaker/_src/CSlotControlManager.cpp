@@ -750,9 +750,10 @@ int CSlotControlManager::GetAvailDistance(const unsigned long long pData, const 
 
 bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDataManageIns, int pDrawFor) {
 	DxLib::SetDrawScreen(pDrawFor);
+	std::vector<int> drawPos; drawPos.resize(m_reelMax * 2, -1);	// 0PS, 1PS, 2PS
+	const int reelPosByOrder[] = { Get2ndReel(posData.isWatchLeft), Get2ndReel(!posData.isWatchLeft) };
+
 	/* リール・入賞役描画 */ {
-		std::vector<int> drawPos; drawPos.resize(m_reelMax * 2, -1);	// 0PS, 1PS, 2PS
-		const int reelPosByOrder[] = { Get2ndReel(posData.isWatchLeft), Get2ndReel(!posData.isWatchLeft) };
 		/* 描画リール定義 */ {
 			if (posData.currentOrder == 0) {			// 1st
 				const auto ss = GetSS();
@@ -881,8 +882,10 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 		for (int flagC = 0; flagC < m_flagMax; ++flagC) {
 			if (flagC == posData.currentFlagID) continue;
 			bool isNotStop = false;
-			for (int i = 0; i < posData.currentOrder; ++i) 
-				if (!GetCanStop(i, posData.cursorComa[i], flagC, true)) { isNotStop = true; break; }
+			for (int i = 0; i < posData.currentOrder; ++i) {
+				const int drawRefIndex = (i == 0 ? posData.stop1st : reelPosByOrder[i - 1]) * 2 + 1;
+				if (!GetCanStop(i, drawPos[drawRefIndex], flagC, true)) { isNotStop = true; break; }
+			}
 			if (isNotStop) continue;
 
 			DrawSlipTable(xPos, yPos, flagC, pData);
