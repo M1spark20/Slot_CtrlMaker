@@ -868,7 +868,7 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 		}
 		xPos += BOX_W;
 		
-		DrawSlipTable(xPos, yPos, posData.currentFlagID, pData);
+		DrawSlipTable(xPos, yPos, posData.currentFlagID, false, drawPos, pData);
 		xPos += BOX_W;
 
 		if (!isSlip()) {
@@ -888,8 +888,8 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 			}
 			if (isNotStop) continue;
 
-			DrawSlipTable(xPos, yPos, flagC, pData);
-			xPos += BOX_W;
+			// テーブルを書くと同時に、戻り値(描画数)に応じた描画位置の移動を行う
+			xPos += BOX_W * DrawSlipTable(xPos, yPos, flagC, true, drawPos, pData);
 			posData.subFlagList.push_back(flagC);	// 20220408追加 リスト追加
 		}
 
@@ -949,10 +949,15 @@ bool CSlotControlManager::DrawComaBox(int x, int y, const unsigned int pStopPos,
 	return true;
 }
 
-bool CSlotControlManager::DrawSlipTable(int x, int y, int pFlagID, SSlotGameDataWrapper& pData) {
+// [act]各テーブルにおけるすべりコマテーブルを描画する
+//		ただしテーブルが未制定の場合は描画を実施しない
+// [prm]drawPos	: 1PS, 2PS, 3PS
+// [ret]描画数、ただしエラー時と制御未制定時は描画位置をシフトする目的で1を返す
+int CSlotControlManager::DrawSlipTable(int x, int y, int pFlagID, bool isDrawMulti, std::vector<int> pDrawPos, SSlotGameDataWrapper& pData) {
 	const int color = (pFlagID == posData.currentFlagID) ? 0xFFFF00 : 0x808080;
 	const std::string flagName  = pData.randManager.GetFlagName (pFlagID);
 	const std::string bonusName = pData.randManager.GetBonusName(pFlagID);
+	int drawCount = 0;
 
 	DxLib::DrawString(x - 1, y - BOX_H*2 + 14, flagName .c_str(), 0xFFFF00);
 	DxLib::DrawString(x - 1, y - BOX_H   +  4, bonusName.c_str(), 0xFFFF00);
@@ -960,9 +965,38 @@ bool CSlotControlManager::DrawSlipTable(int x, int y, int pFlagID, SSlotGameData
 	int highLightPos = posData.currentOrder;
 	if (Get2ndStyle() == 0x3 && posData.selectReel == 2) highLightPos = 2;
 
-	if (isSlip(pFlagID)) {
-		const auto ss = GetSS(pFlagID);
-		if (ss == nullptr) return false;
+	if (Get2ndStyle(0, pFlagID) == 0x0 && posData.currentOrder == 1) {
+		// PushS 2nd時は全押し位置をスキャンして、停止位置と同じならすべて描画する
+		const auto ss1st = GetSS(pFlagID, true, posData.stop1st, pDrawPos[posData.stop1st * 2 + 1], posData.isWatchLeft);
+		if (ss1st == nullptr)	return 1;
+		if (*ss1st == 0)		return 1;
+		const int pos1stLoopMax = isDrawMulti ? m_comaMax : 1;
+
+		for (int pos1st = 0; pos1st < pos1stLoopMax; ++pos1st) {
+			const int checkPos = (pos1st + pDrawPos[posData.stop1st * 2]) % m_comaMax;
+			if (GetPosFromSlipT(*ss1st, checkPos) != pDrawPos[posData.stop1st * 2 + 1]) continue;
+
+			const auto ss = GetSS(pFlagID, posData.currentOrder == 0, posData.stop1st, checkPos, posData.isWatchLeft);
+			if (ss == nullptr)	return 1;
+			if (*ss == 0)		continue;
+			DrawComaBox(x-3, y-6, tableSlip[*ss].activePos, posData.cursorComa[highLightPos]);
+
+			// 停止位置が一致したデータの描画
+			for (int i = 0; i < m_comaMax; ++i) {
+				const int posY = y + 26 * (m_comaMax - i - 1);
+				int stopPos = GetPosFromSlipT(*ss, i);
+				int showVal = ((stopPos + m_comaMax) - i) % m_comaMax;
+				DxLib::DrawFormatString(x, posY, color, "%d", showVal);
+			}
+			++drawCount;
+			x += BOX_W;
+		}
+	} else if (isSlip(pFlagID, posData.currentOrder, posData.stop1st, pDrawPos[posData.stop1st * 2 + 1])) {
+		// PushS 1st時 または StopS 2nd時
+		const auto ss = GetSS(pFlagID, posData.currentOrder == 0, posData.stop1st,
+			pDrawPos[posData.stop1st * 2 + 1], posData.isWatchLeft);
+		if (ss == nullptr)	return 1;
+		if (*ss == 0)		return 1;
 		DrawComaBox(x-3, y-6, tableSlip[*ss].activePos, posData.cursorComa[highLightPos]);
 		for (int i = 0; i < m_comaMax; ++i) {
 			const int posY = y + 26 * (m_comaMax - i - 1);
@@ -970,13 +1004,17 @@ bool CSlotControlManager::DrawSlipTable(int x, int y, int pFlagID, SSlotGameData
 			int showVal = ((stopPos + m_comaMax) - i) % m_comaMax;
 			DxLib::DrawFormatString(x, posY, color, "%d", showVal);
 		}
+		++drawCount;
+		x += BOX_W;
 	} else {
-		SControlDataSA* sa = GetSA(pFlagID);
-		if(sa == nullptr) return false;
-
 		// ComSAでcurrentOrder=2の時は表示データを反転させる
-		const bool watchLeft = (Get2ndStyle(posData.cursorComa[0], pFlagID)==0x3 && posData.currentOrder == 2) ?
+		const bool watchLeft = (Get2ndStyle(pDrawPos[posData.stop1st * 2 + 1], pFlagID)==0x3 && posData.currentOrder == 2) ?
 			!posData.isWatchLeft : posData.isWatchLeft;
+
+		SControlDataSA* sa = GetSA(pFlagID, posData.currentOrder, posData.stop1st,
+			pDrawPos[posData.stop1st * 2 + 1], pDrawPos[Get2ndReel(watchLeft) * 2 + 1]);
+		if (sa == nullptr) return 1;				// データなし時
+		if (sa->data[0].availableID == 0) return 1;	// データ未入力時
 
 		const unsigned int stopFlag = m_isSuspend ? 0 : GetActiveFromAvailT(*sa, watchLeft);
 		DrawComaBox(x-3, y-6, stopFlag, posData.cursorComa[highLightPos]);
@@ -990,8 +1028,11 @@ bool CSlotControlManager::DrawSlipTable(int x, int y, int pFlagID, SSlotGameData
 				DxLib::DrawString(x, posY, "X", 0xFF0000);
 			}
 		}
+		++drawCount;
+		x += BOX_W;
 	}
-	return true;
+
+	return drawCount <= 0 ? 1 : drawCount;
 }
 
 bool CSlotControlManager::DrawStopTable(int x, int y, int pFlagID) {
