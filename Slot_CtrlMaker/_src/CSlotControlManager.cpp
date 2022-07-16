@@ -868,7 +868,7 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 		}
 		xPos += BOX_W;
 		
-		DrawSlipTable(xPos, yPos, posData.currentFlagID, false, drawPos, pData);
+		DrawSlipTable(xPos, yPos, posData.currentFlagID, true, drawPos, pData);
 		xPos += BOX_W;
 
 		if (!isSlip()) {
@@ -889,7 +889,7 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 			if (isNotStop) continue;
 
 			// テーブルを書くと同時に、戻り値(描画数)に応じた描画位置の移動を行う
-			xPos += BOX_W * DrawSlipTable(xPos, yPos, flagC, true, drawPos, pData);
+			xPos += BOX_W * DrawSlipTable(xPos, yPos, flagC, false, drawPos, pData);
 			posData.subFlagList.push_back(flagC);	// 20220408追加 リスト追加
 		}
 
@@ -953,7 +953,7 @@ bool CSlotControlManager::DrawComaBox(int x, int y, const unsigned int pStopPos,
 //		ただしテーブルが未制定の場合は描画を実施しない
 // [prm]drawPos	: 1PS, 2PS, 3PS
 // [ret]描画数、ただしエラー時と制御未制定時は描画位置をシフトする目的で1を返す
-int CSlotControlManager::DrawSlipTable(int x, int y, int pFlagID, bool isDrawMulti, std::vector<int> pDrawPos, SSlotGameDataWrapper& pData) {
+int CSlotControlManager::DrawSlipTable(int x, int y, int pFlagID, bool isDrawSelf, std::vector<int> pDrawPos, SSlotGameDataWrapper& pData) {
 	const int color = (pFlagID == posData.currentFlagID) ? 0xFFFF00 : 0x808080;
 	const std::string flagName  = pData.randManager.GetFlagName (pFlagID);
 	const std::string bonusName = pData.randManager.GetBonusName(pFlagID);
@@ -968,17 +968,17 @@ int CSlotControlManager::DrawSlipTable(int x, int y, int pFlagID, bool isDrawMul
 	if (Get2ndStyle(0, pFlagID) == 0x0 && posData.currentOrder == 1) {
 		// PushS 2nd時は全押し位置をスキャンして、停止位置と同じならすべて描画する
 		const auto ss1st = GetSS(pFlagID, true, posData.stop1st, pDrawPos[posData.stop1st * 2 + 1], posData.isWatchLeft);
-		if (ss1st == nullptr)	return 1;
-		if (*ss1st == 0)		return 1;
-		const int pos1stLoopMax = isDrawMulti ? m_comaMax : 1;
+		if (ss1st == nullptr)			return 1;
+		if (*ss1st == 0 && !isDrawSelf)	return 1;
+		const int pos1stLoopMax = isDrawSelf ? 1 : m_comaMax;
 
 		for (int pos1st = 0; pos1st < pos1stLoopMax; ++pos1st) {
 			const int checkPos = (pos1st + pDrawPos[posData.stop1st * 2]) % m_comaMax;
 			if (GetPosFromSlipT(*ss1st, checkPos) != pDrawPos[posData.stop1st * 2 + 1]) continue;
 
 			const auto ss = GetSS(pFlagID, posData.currentOrder == 0, posData.stop1st, checkPos, posData.isWatchLeft);
-			if (ss == nullptr)	return 1;
-			if (*ss == 0)		continue;
+			if (ss == nullptr)				return 1;
+			if (*ss == 0 && !isDrawSelf)	continue;
 			DrawComaBox(x-3, y-6, tableSlip[*ss].activePos, posData.cursorComa[highLightPos]);
 
 			// 停止位置が一致したデータの描画
@@ -995,8 +995,8 @@ int CSlotControlManager::DrawSlipTable(int x, int y, int pFlagID, bool isDrawMul
 		// PushS 1st時 または StopS 2nd時
 		const auto ss = GetSS(pFlagID, posData.currentOrder == 0, posData.stop1st,
 			pDrawPos[posData.stop1st * 2 + 1], posData.isWatchLeft);
-		if (ss == nullptr)	return 1;
-		if (*ss == 0)		return 1;
+		if (ss == nullptr)				return 1;
+		if (*ss == 0 && !isDrawSelf)	return 1;
 		DrawComaBox(x-3, y-6, tableSlip[*ss].activePos, posData.cursorComa[highLightPos]);
 		for (int i = 0; i < m_comaMax; ++i) {
 			const int posY = y + 26 * (m_comaMax - i - 1);
@@ -1013,8 +1013,8 @@ int CSlotControlManager::DrawSlipTable(int x, int y, int pFlagID, bool isDrawMul
 
 		SControlDataSA* sa = GetSA(pFlagID, posData.currentOrder, posData.stop1st,
 			pDrawPos[posData.stop1st * 2 + 1], pDrawPos[Get2ndReel(watchLeft) * 2 + 1]);
-		if (sa == nullptr) return 1;				// データなし時
-		if (sa->data[0].availableID == 0) return 1;	// データ未入力時
+		if (sa == nullptr)									return 1;	// データなし時
+		if (sa->data[0].availableID == 0 && !isDrawSelf)	return 1;	// データ未入力時
 
 		const unsigned int stopFlag = m_isSuspend ? 0 : GetActiveFromAvailT(*sa, watchLeft);
 		DrawComaBox(x-3, y-6, stopFlag, posData.cursorComa[highLightPos]);
