@@ -1013,8 +1013,9 @@ int CSlotControlManager::DrawSlipTable(int x, int y, int pFlagID, bool isDrawSel
 
 		SControlDataSA* sa = GetSA(pFlagID, posData.currentOrder, posData.stop1st,
 			pDrawPos[posData.stop1st * 2 + 1], pDrawPos[Get2ndReel(watchLeft) * 2 + 1]);
-		if (sa == nullptr)									return 1;	// データなし時
-		if (sa->data[0].availableID == 0 && !isDrawSelf)	return 1;	// データ未入力時
+		if (sa == nullptr)										return 1;	// データなし時
+		const int checkSA = watchLeft ? 0 : AVAIL_ID_MAX;
+		if (sa->data[checkSA].availableID == 0 && !isDrawSelf)	return 1;	// データ未入力時
 
 		const unsigned int stopFlag = m_isSuspend ? 0 : GetActiveFromAvailT(*sa, watchLeft);
 		DrawComaBox(x-3, y-6, stopFlag, posData.cursorComa[highLightPos]);
