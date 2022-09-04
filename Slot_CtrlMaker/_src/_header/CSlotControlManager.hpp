@@ -23,6 +23,7 @@ class CSlotControlManager {
 	bool m_isSuspend;					// SAで無効データがある場合trueにして編集対象をロックする
 	bool m_refreshFlag;
 	bool m_checkLaunchFlag;
+	bool m_onlyShowNoneFlag;			// 20220904Add: ハズレ/レアハズレ/1枚役のみ表示
 
 	std::vector<SControlMakeData>	ctrlData;
 	std::vector<SControlTable>		tableSlip;

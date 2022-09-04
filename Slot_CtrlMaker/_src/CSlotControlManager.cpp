@@ -14,6 +14,7 @@ bool CSlotControlManager::Init(const SSlotGameDataWrapper& pData) {
 	m_isSuspend = false;
 	m_refreshFlag = false;
 	m_checkLaunchFlag = false;
+	m_onlyShowNoneFlag = false;
 
 	/* slipT初期化 */ {
 		const unsigned long long allStopFlag = m_allStopFlag;
@@ -134,6 +135,9 @@ bool CSlotControlManager::Process() {
 
 		// 引き込みチェック表示設定：X押しっぱなしで表示
 		m_checkLaunchFlag = (key.ExportKeyStateFrame(KEY_INPUT_X) >= 1);
+		// 20220904Add: ハズレ/レアハズレ/1枚役のみ表示 : Z押しっぱなしで有効
+		m_onlyShowNoneFlag = (key.ExportKeyStateFrame(KEY_INPUT_Z) >= 1);
+
 	}
 	return true;
 }
@@ -881,6 +885,11 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 		posData.subFlagList.clear();	// 20220408追加 いちいちクリアする
 		for (int flagC = 0; flagC < m_flagMax; ++flagC) {
 			if (flagC == posData.currentFlagID) continue;
+
+			// 20220904Add: フラグ名からハズレ/レアハズレ/1枚役を判断し、除外条件があればテーブルを描画しない
+			const std::string flagName  = pData.randManager.GetFlagName(flagC);
+			if (m_onlyShowNoneFlag && flagName.substr(0, 1) != "-" && flagName.substr(0, 1) != "1" && flagName.substr(1, 1) != "-") { continue; }
+
 			bool isNotStop = false;
 			for (int i = 0; i < posData.currentOrder; ++i) {
 				const int drawRefIndex = (i == 0 ? posData.stop1st : reelPosByOrder[i - 1]) * 2 + 1;
