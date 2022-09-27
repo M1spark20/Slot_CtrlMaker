@@ -24,6 +24,7 @@ class CSlotControlManager {
 	bool m_refreshFlag;
 	bool m_checkLaunchFlag;
 	bool m_onlyShowNoneFlag;			// 20220904Add: ハズレ/レアハズレ/1枚役のみ表示
+	std::vector<int> m_drawPos;			// 20220928Add: 描画位置をメンバ変数に変更
 
 	std::vector<SControlMakeData>	ctrlData;
 	std::vector<SControlTable>		tableSlip;
@@ -69,6 +70,11 @@ class CSlotControlManager {
 	unsigned long long GetAvailShiftData(const SControlDataSA& pSAData, const int pIndex, bool pIsLeft);
 	bool GetCanStop(const int pMoveOrder, const int pLookFor, const int pFlagID, const bool pCheck1st);
 
+	// 同一箇所停止可能性の判定(subFlag)
+	bool SetSubFlag(SSlotGameDataWrapper& pData);
+	// 描画位置設定
+	bool SetDrawPos();
+
 	int  GetPosFromSlipT(const size_t pTableNo, const int pPushPos);
 	int  GetPosFromAvailT(const SControlDataSA& pSAData, const int pPushPos, bool pIsLeft);
 	int  GetAvailDistance(const unsigned long long pData, const int pPushPos);
@@ -86,7 +92,7 @@ class CSlotControlManager {
 
 public:
 	bool Init(const SSlotGameDataWrapper& pData);
-	bool Process();
+	bool Process(SSlotGameDataWrapper& pData);
 	bool Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDataManageIns, int pDrawFor);
 
 	bool RefreshFlag() const;

@@ -74,7 +74,7 @@ bool CSlotControlManager::Init(const SSlotGameDataWrapper& pData) {
 	return true;
 }
 
-bool CSlotControlManager::Process() {
+bool CSlotControlManager::Process(SSlotGameDataWrapper& pData) {
 	m_refreshFlag = false;
 	/* 画面操作 */ {
 		CKeyExport_S& key = CKeyExport_S::GetInstance();
@@ -138,6 +138,10 @@ bool CSlotControlManager::Process() {
 		// 20220904Add: ハズレ/レアハズレ/1枚役のみ表示 : Z押しっぱなしで有効
 		m_onlyShowNoneFlag = (key.ExportKeyStateFrame(KEY_INPUT_Z) >= 1);
 
+		// 描画位置定義
+		SetDrawPos();
+		// subFlag定義
+		SetSubFlag(pData);
 	}
 	return true;
 }
@@ -754,50 +758,10 @@ int CSlotControlManager::GetAvailDistance(const unsigned long long pData, const 
 
 bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDataManageIns, int pDrawFor) {
 	DxLib::SetDrawScreen(pDrawFor);
-	std::vector<int> drawPos; drawPos.resize(m_reelMax * 2, -1);	// 0PS, 1PS, 2PS
+	m_drawPos.resize(m_reelMax * 2, -1);	// 0PS, 1PS, 2PS
 	const int reelPosByOrder[] = { Get2ndReel(posData.isWatchLeft), Get2ndReel(!posData.isWatchLeft) };
 
 	/* リール・入賞役描画 */ {
-		/* 描画リール定義 */ {
-			if (posData.currentOrder == 0) {			// 1st
-				const auto ss = GetSS();
-				drawPos[posData.stop1st * 2    ] = posData.cursorComa[0];
-				drawPos[posData.stop1st * 2 + 1] = GetPosFromSlipT(*ss, posData.cursorComa[0]);
-			} else if (Get2ndStyle() == 0x03) {			// 2nd以降 2nd/3rd共通
-				const auto sa = GetSA();
-				drawPos[posData.stop1st   * 2    ] = posData.cursorComa[0];
-				drawPos[posData.stop1st   * 2 + 1] = posData.cursorComa[0];
-				drawPos[Get2ndReel(true)  * 2    ] = posData.cursorComa[1];
-				drawPos[Get2ndReel(true)  * 2 + 1] = GetPosFromAvailT(*sa, posData.cursorComa[1], true);
-				drawPos[Get2ndReel(false) * 2    ] = posData.cursorComa[2];
-				drawPos[Get2ndReel(false) * 2 + 1] = GetPosFromAvailT(*sa, posData.cursorComa[2], false);
-			} else if (posData.currentOrder == 1) {		// 2ndComSA以外
-				drawPos[posData.stop1st   * 2    ] = posData.cursorComa[0];
-				drawPos[reelPosByOrder[0] * 2    ] = posData.cursorComa[1];
-				if (Get2ndStyle() == 0x00) {				// PSテーブル
-					const unsigned char *const ss1 = GetSS(true);	// -1:現在選択中のフラグ
-					const unsigned char *const ss2 = GetSS(false);
-					drawPos[posData.stop1st   * 2 + 1] = GetPosFromSlipT(*ss1, posData.cursorComa[0]);
-					drawPos[reelPosByOrder[0] * 2 + 1] = GetPosFromSlipT(*ss2, posData.cursorComa[1]);
-				} else if (Get2ndStyle() == 0x01) {			// SSテーブル
-					const unsigned char *const ss2 = GetSS(false);
-					drawPos[posData.stop1st   * 2 + 1] = posData.cursorComa[0];
-					drawPos[reelPosByOrder[0] * 2 + 1] = GetPosFromSlipT(*ss2, posData.cursorComa[1]);
-				} else {									// SAテーブル
-					const auto sa = GetSA();
-					drawPos[posData.stop1st   * 2 + 1] = posData.cursorComa[0];
-					drawPos[reelPosByOrder[0] * 2 + 1] = GetPosFromAvailT(*sa, posData.cursorComa[1], posData.isWatchLeft);
-				}
-			} else {									// 3rdComSA以外
-				const auto sa = GetSA();
-				drawPos[posData.stop1st   * 2    ] = posData.cursorComa[0];
-				drawPos[posData.stop1st   * 2 + 1] = posData.cursorComa[0];
-				drawPos[reelPosByOrder[0] * 2    ] = posData.cursorComa[1];
-				drawPos[reelPosByOrder[0] * 2 + 1] = posData.cursorComa[1];
-				drawPos[reelPosByOrder[1] * 2    ] = posData.cursorComa[2];
-				drawPos[reelPosByOrder[1] * 2 + 1] = GetPosFromAvailT(*sa, posData.cursorComa[2], posData.isWatchLeft);
-			}
-		}
 		SReelDrawData drawReel;
 		/* SReelDrawData初期作成 */ {
 			drawReel.y = 1;
@@ -805,27 +769,27 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 			drawReel.offsetLower = 0; drawReel.offsetUpper = 0;
 		}
 		// リール描画
-		for (size_t i = 0; i < drawPos.size(); i+=2) {
-			if (drawPos[i] < 0) continue;
+		for (size_t i = 0; i < m_drawPos.size(); i+=2) {
+			if (m_drawPos[i] < 0) continue;
 			const int posOffset = drawReel.comaW / 2 - 8;
 			const int posY = drawReel.y + drawReel.comaH * drawReel.comaNum + 1;
 			drawReel.x = 502 + 78 * (i/2); drawReel.reelID = i/2;
-			int castPos = (m_comaMax * 2 - 3 - drawPos[i]) % m_comaMax;
+			int castPos = (m_comaMax * 2 - 3 - m_drawPos[i]) % m_comaMax;
 			pData.reelManager.DrawReel(pDataManageIns, drawReel, castPos, pDrawFor);
-			DxLib::DrawFormatString(drawReel.x + posOffset, posY, 0xFFFF00, "%02d", drawPos[i] + 1);
+			DxLib::DrawFormatString(drawReel.x + posOffset, posY, 0xFFFF00, "%02d", m_drawPos[i] + 1);
 
 			drawReel.x = 768 + 78 * (i/2);
-			castPos = (m_comaMax * 2 - 3 - drawPos[i + 1]) % m_comaMax;
+			castPos = (m_comaMax * 2 - 3 - m_drawPos[i + 1]) % m_comaMax;
 			pData.reelManager.DrawReel(pDataManageIns, drawReel, castPos, pDrawFor);
-			DxLib::DrawFormatString(drawReel.x + posOffset, posY, 0xFFFF00, "%02d", drawPos[i+1] + 1);
+			DxLib::DrawFormatString(drawReel.x + posOffset, posY, 0xFFFF00, "%02d", m_drawPos[i+1] + 1);
 		}
 
 		/* 入賞役描画 */ {
 			bool drawFlag = true;
 			std::vector<int> checkPos(m_reelMax);
 			for (size_t i = 0; i < checkPos.size(); ++i) {
-				if (drawPos[i * 2 + 1] == -1) { drawFlag = false; break; }
-				checkPos[i] = (m_comaMax * 2 - drawPos[i * 2 + 1] - 3) % m_comaMax;
+				if (m_drawPos[i * 2 + 1] == -1) { drawFlag = false; break; }
+				checkPos[i] = (m_comaMax * 2 - m_drawPos[i * 2 + 1] - 3) % m_comaMax;
 			}
 			if (drawFlag) {
 				const auto stopData = pData.reelChecker.GetPosData(posData.stop1st, checkPos);
@@ -872,7 +836,7 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 		}
 		xPos += BOX_W;
 		
-		DrawSlipTable(xPos, yPos, posData.currentFlagID, true, drawPos, pData);
+		DrawSlipTable(xPos, yPos, posData.currentFlagID, true, m_drawPos, pData);
 		xPos += BOX_W;
 
 		if (!isSlip()) {
@@ -882,58 +846,43 @@ bool CSlotControlManager::Draw(SSlotGameDataWrapper& pData, CGameDataManage& pDa
 		xPos += BOX_W;
 
 		// 参考資料として他テーブルを描画
-		posData.subFlagList.clear();	// 20220408追加 いちいちクリアする
-		for (int flagC = 0; flagC < m_flagMax; ++flagC) {
-			if (flagC == posData.currentFlagID) continue;
+		// (20220928)subflag定義分離
 
-			// 20220904Add: フラグ名からハズレ/レアハズレ/1枚役を判断し、除外条件があればテーブルを描画しない
-			const std::string flagName  = pData.randManager.GetFlagName(flagC);
-			if (m_onlyShowNoneFlag && flagName.substr(0, 1) != "-" && flagName.substr(0, 1) != "1" && flagName.substr(1, 1) != "-") { continue; }
-
-			bool isNotStop = false;
-			for (int i = 0; i < posData.currentOrder; ++i) {
-				const int drawRefIndex = (i == 0 ? posData.stop1st : reelPosByOrder[i - 1]) * 2 + 1;
-				if (!GetCanStop(i, drawPos[drawRefIndex], flagC, true)) { isNotStop = true; break; }
-			}
-			if (isNotStop) continue;
-
+		// 20220408追加 定義サブ描画追加(20220928:フラグ名と統合)
+		for (size_t subC = 0; subC < posData.subFlagList.size(); ++subC) {
+			const auto subFlagNo = posData.subFlagList[subC];
 			// テーブルを書くと同時に、戻り値(描画数)に応じた描画位置の移動を行う
-			xPos += BOX_W * DrawSlipTable(xPos, yPos, flagC, false, drawPos, pData);
-			posData.subFlagList.push_back(flagC);	// 20220408追加 リスト追加
-		}
+			xPos += BOX_W * DrawSlipTable(xPos, yPos, subFlagNo, false, m_drawPos, pData);
 
-		// 20220408追加 定義サブ描画追加
-		if (!posData.subFlagList.empty()) {
-			if (posData.subFlagPos >= 0 && (size_t)posData.subFlagPos < posData.subFlagList.size()) {
-				const int index = posData.subFlagList[posData.subFlagPos];
-
+			if (subC == posData.subFlagPos) {
 				// フラグ名描画
-				const std::string flagName  = pData.randManager.GetFlagName (index);
-				const std::string bonusName = pData.randManager.GetBonusName(index);
-				const std::string flagOut   = flagName + " " + bonusName;
+				const std::string flagName = pData.randManager.GetFlagName(subFlagNo);
+				const std::string bonusName = pData.randManager.GetBonusName(subFlagNo);
+				const std::string flagOut = flagName + " " + bonusName;
 				DxLib::DrawFormatString(1010, 65, 0xF0F0FF, "%s", flagOut.c_str());
 
 				// 制御定義描画
-				if (isSlip(index)) {
-					const auto ss = GetSS(index);
+				if (isSlip(subFlagNo)) {
+					const auto ss = GetSS(subFlagNo);
 					if (ss == nullptr) return false;
 					DxLib::DrawFormatString(1010, 80, 0xF0F0FF, "SlipT  : %d", *ss);
-				} else {
-					SControlDataSA* sa = GetSA(index);
+				}
+				else {
+					SControlDataSA* sa = GetSA(subFlagNo);
 					if (sa == nullptr) return false;
 					DxLib::DrawString(1010, 80, "AvailT :", 0xF0F0FF);
 
 					// 20220507: 選択中データがComSAかつcurrentOrder=2ならwatchLeft反転
-					const bool watchLeft = (Get2ndStyle(posData.cursorComa[0], index) == 0x3 && posData.currentOrder == 2) ?
+					const bool watchLeft = (Get2ndStyle(posData.cursorComa[0], subFlagNo) == 0x3 && posData.currentOrder == 2) ?
 						!posData.isWatchLeft : posData.isWatchLeft;
 
 					for (int i = 0; i < AVAIL_ID_MAX; ++i) {
 						const int saWatch = i + (watchLeft ? 0 : AVAIL_ID_MAX);
-						const std::string shiftType[] = {"D", "u", "d", "s"};
-						const std::string invPriorType[] = {"  ", " P", "I ", "IP"};
+						const std::string shiftType[] = { "D", "u", "d", "s" };
+						const std::string invPriorType[] = { "  ", " P", "I ", "IP" };
 						const auto& type = sa->data[saWatch].tableFlag;
 						const std::string typeStr = shiftType[type & 0x3] + invPriorType[(type >> 2) & 0x3];
-						DxLib::DrawFormatString(1090 + i*63, 80, 0xF0F0FF, "%3d%s", sa->data[saWatch].availableID, typeStr.c_str());
+						DxLib::DrawFormatString(1090 + i * 63, 80, 0xF0F0FF, "%3d%s", sa->data[saWatch].availableID, typeStr.c_str());
 					}
 				}
 			}
@@ -960,7 +909,7 @@ bool CSlotControlManager::DrawComaBox(int x, int y, const unsigned int pStopPos,
 
 // [act]各テーブルにおけるすべりコマテーブルを描画する
 //		ただしテーブルが未制定の場合は描画を実施しない
-// [prm]drawPos	: 1PS, 2PS, 3PS
+// [prm]m_drawPos	: 1PS, 2PS, 3PS
 // [ret]描画数、ただしエラー時と制御未制定時は描画位置をシフトする目的で1を返す
 int CSlotControlManager::DrawSlipTable(int x, int y, int pFlagID, bool isDrawSelf, std::vector<int> pDrawPos, SSlotGameDataWrapper& pData) {
 	const int color = (pFlagID == posData.currentFlagID) ? 0xFFFF00 : 0x808080;
@@ -1543,3 +1492,79 @@ bool CSlotControlManager::WriteRestore(CRestoreManagerWrite& pWriter) const {
 bool CSlotControlManager::RefreshFlag() const {
 	return m_refreshFlag && !m_isSuspend;
 }
+
+
+// (20220928追加)
+bool CSlotControlManager::SetDrawPos() {
+	const int reelPosByOrder[] = { Get2ndReel(posData.isWatchLeft), Get2ndReel(!posData.isWatchLeft) };
+
+	if (posData.currentOrder == 0) {			// 1st
+		const auto ss = GetSS();
+		m_drawPos[posData.stop1st * 2] = posData.cursorComa[0];
+		m_drawPos[posData.stop1st * 2 + 1] = GetPosFromSlipT(*ss, posData.cursorComa[0]);
+	}
+	else if (Get2ndStyle() == 0x03) {			// 2nd以降 2nd/3rd共通
+		const auto sa = GetSA();
+		m_drawPos[posData.stop1st * 2] = posData.cursorComa[0];
+		m_drawPos[posData.stop1st * 2 + 1] = posData.cursorComa[0];
+		m_drawPos[Get2ndReel(true) * 2] = posData.cursorComa[1];
+		m_drawPos[Get2ndReel(true) * 2 + 1] = GetPosFromAvailT(*sa, posData.cursorComa[1], true);
+		m_drawPos[Get2ndReel(false) * 2] = posData.cursorComa[2];
+		m_drawPos[Get2ndReel(false) * 2 + 1] = GetPosFromAvailT(*sa, posData.cursorComa[2], false);
+	}
+	else if (posData.currentOrder == 1) {		// 2ndComSA以外
+		m_drawPos[posData.stop1st * 2] = posData.cursorComa[0];
+		m_drawPos[reelPosByOrder[0] * 2] = posData.cursorComa[1];
+		if (Get2ndStyle() == 0x00) {				// PSテーブル
+			const unsigned char* const ss1 = GetSS(true);	// -1:現在選択中のフラグ
+			const unsigned char* const ss2 = GetSS(false);
+			m_drawPos[posData.stop1st * 2 + 1] = GetPosFromSlipT(*ss1, posData.cursorComa[0]);
+			m_drawPos[reelPosByOrder[0] * 2 + 1] = GetPosFromSlipT(*ss2, posData.cursorComa[1]);
+		}
+		else if (Get2ndStyle() == 0x01) {			// SSテーブル
+			const unsigned char* const ss2 = GetSS(false);
+			m_drawPos[posData.stop1st * 2 + 1] = posData.cursorComa[0];
+			m_drawPos[reelPosByOrder[0] * 2 + 1] = GetPosFromSlipT(*ss2, posData.cursorComa[1]);
+		}
+		else {									// SAテーブル
+			const auto sa = GetSA();
+			m_drawPos[posData.stop1st * 2 + 1] = posData.cursorComa[0];
+			m_drawPos[reelPosByOrder[0] * 2 + 1] = GetPosFromAvailT(*sa, posData.cursorComa[1], posData.isWatchLeft);
+		}
+	}
+	else {									// 3rdComSA以外
+		const auto sa = GetSA();
+		m_drawPos[posData.stop1st * 2] = posData.cursorComa[0];
+		m_drawPos[posData.stop1st * 2 + 1] = posData.cursorComa[0];
+		m_drawPos[reelPosByOrder[0] * 2] = posData.cursorComa[1];
+		m_drawPos[reelPosByOrder[0] * 2 + 1] = posData.cursorComa[1];
+		m_drawPos[reelPosByOrder[1] * 2] = posData.cursorComa[2];
+		m_drawPos[reelPosByOrder[1] * 2 + 1] = GetPosFromAvailT(*sa, posData.cursorComa[2], posData.isWatchLeft);
+	}
+
+	return true;
+}
+
+bool CSlotControlManager::SetSubFlag(SSlotGameDataWrapper& pData) {
+	const int reelPosByOrder[] = { Get2ndReel(posData.isWatchLeft), Get2ndReel(!posData.isWatchLeft) };
+
+	posData.subFlagList.clear();	// 20220408追加 いちいちクリアする
+	for (int flagC = 0; flagC < m_flagMax; ++flagC) {
+		if (flagC == posData.currentFlagID) continue;
+
+		// 20220904Add: フラグ名からハズレ/レアハズレ/1枚役を判断し、除外条件があればテーブルを描画しない
+		const std::string flagName = pData.randManager.GetFlagName(flagC);
+		if (m_onlyShowNoneFlag && flagName.substr(0, 1) != "-" && flagName.substr(0, 1) != "1" && flagName.substr(1, 1) != "-") { continue; }
+
+		bool isNotStop = false;
+		for (int i = 0; i < posData.currentOrder; ++i) {
+			const int drawRefIndex = (i == 0 ? posData.stop1st : reelPosByOrder[i - 1]) * 2 + 1;
+			if (!GetCanStop(i, m_drawPos[drawRefIndex], flagC, true)) { isNotStop = true; break; }
+		}
+		if (isNotStop) continue;
+
+		posData.subFlagList.push_back(flagC);	// 20220408追加 リスト追加
+	}
+	return true;
+}
+// (20220928追加ここまで)

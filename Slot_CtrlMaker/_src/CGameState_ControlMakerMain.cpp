@@ -50,7 +50,7 @@ EChangeStateFlag CGameState_ControlMakerMain::Process(CGameDataManage& pDataMana
 		return EChangeStateFlag::eStateEnd;
 
 	m_data.timeManager.Process();
-	m_controlManager.Process();
+	m_controlManager.Process(m_data);
 	ESlotFlowFlag flow = m_pFlowManager->Process(m_data);
 	if (flow != ESlotFlowFlag::eFlowContinue) {
 		delete m_pFlowManager;	m_pFlowManager = nullptr;
