@@ -74,6 +74,8 @@ class CSlotControlManager {
 	bool SetSubFlag(SSlotGameDataWrapper& pData);
 	// 描画位置設定
 	bool SetDrawPos();
+	// 制御コピー
+	bool CopyControl();
 
 	int  GetPosFromSlipT(const size_t pTableNo, const int pPushPos);
 	int  GetPosFromAvailT(const SControlDataSA& pSAData, const int pPushPos, bool pIsLeft);

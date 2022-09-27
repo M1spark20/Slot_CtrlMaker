@@ -131,7 +131,7 @@ bool CSlotControlManager::Process(SSlotGameDataWrapper& pData) {
 		else if (!m_isSuspend && shiftFlag && key.ExportKeyState(KEY_INPUT_S)) {
 			for (int i = 0; i < 10; ++i) ActionTableID(false);
 		}
-		AdjustPos();
+		else if (!m_isSuspend && shiftFlag && key.ExportKeyState(KEY_INPUT_C)) CopyControl();
 
 		// 引き込みチェック表示設定：X押しっぱなしで表示
 		m_checkLaunchFlag = (key.ExportKeyStateFrame(KEY_INPUT_X) >= 1);
@@ -142,6 +142,8 @@ bool CSlotControlManager::Process(SSlotGameDataWrapper& pData) {
 		SetDrawPos();
 		// subFlag定義
 		SetSubFlag(pData);
+
+		AdjustPos();
 	}
 	return true;
 }
@@ -1566,5 +1568,35 @@ bool CSlotControlManager::SetSubFlag(SSlotGameDataWrapper& pData) {
 		posData.subFlagList.push_back(flagC);	// 20220408追加 リスト追加
 	}
 	return true;
+}
+
+bool CSlotControlManager::CopyControl() {
+	// コピー元サブフラグ呼び出し
+	const auto subFlagNo = posData.subFlagList[posData.subFlagPos];
+	// SlipとAvailが異なればコピーを実施しない
+	if (isSlip() != isSlip(subFlagNo)) return true;
+
+	// slipの場合:制御Noをそのままコピー
+	if (isSlip()) {
+		*GetSS() = *GetSS(subFlagNo);
+	}
+	// availの場合:全情報をコピー
+	else {
+		const auto& dst = GetSA(subFlagNo)->data;
+		// 20220507: 選択中データがComSAかつcurrentOrder=2ならwatchLeft反転
+		const bool watchLeft = (Get2ndStyle(posData.cursorComa[0], subFlagNo) == 0x3 && posData.currentOrder == 2) ?
+			!posData.isWatchLeft : posData.isWatchLeft;
+
+		for (int i = 0; i < AVAIL_ID_MAX; ++i) {
+			const int saWatch = i + (watchLeft ? 0 : AVAIL_ID_MAX);
+			GetSA()->data[saWatch].availableID = dst[saWatch].availableID;
+			GetSA()->data[saWatch].tableFlag = dst[saWatch].tableFlag;
+		}
+		CheckSA();
+	}
+
+	m_refreshFlag = true;
+	// チェック
+	return UpdateActiveFlag();
 }
 // (20220928追加ここまで)
